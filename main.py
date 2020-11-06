@@ -2,6 +2,7 @@ import requests
 import os.path
 import urllib.request
 from urllib.parse import urlparse
+from datetime import datetime, timedelta
 
 from typing import Optional
 from fastapi import FastAPI, Query, Header, Cookie
@@ -40,7 +41,9 @@ API_LIST = {
     
     'client': API_ADDR + 'client/',
     'clubs': API_ADDR + 'clubs/',
-    'trainers': API_ADDR + 'appointment_trainers/'
+    'trainers': API_ADDR + 'appointment_trainers/',
+    'times': API_ADDR + 'appointment_times/',
+    'services': API_ADDR + 'appointment_services/'
 }
 
 # Авторизуемся на сервере API
@@ -223,7 +226,7 @@ def update_client(item: ModelClientUpdate, utoken: str = Header(...)):
 
 # РАБОТА С ТРЕНЕРАМИ
 
-@app.get("/api/trainers", name="Получить тренеров")
+@app.get("/api/trainers/old", name="Получить тренеров")
 def get_trainers(utoken: str = Header(...), club_id: str = Header(...)):
     key = get_key_by_club(club_id)
     response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
@@ -244,3 +247,243 @@ def get_trainers(utoken: str = Header(...), club_id: str = Header(...)):
                     item['photo'] = SERVER_IMAGES + photo_name
         
     return rj
+
+
+@app.get("/api/trainers/times", name="Свободное время / тренеров")
+def get_free_times(club_id: Optional[str] = Query(...), employee_id: Optional[str] = Query(None), utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    
+    if not employee_id:
+        response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
+        rj = response.json()
+        
+        for item in rj['data']:
+            if not item['position']['id']:
+                employee_id = item['id']
+    
+    response = session.get(
+        API_LIST['times'], 
+        params={'club_id': club_id, 'employee_id': employee_id}, 
+        headers={'usertoken': utoken, 'apikey': key}
+    )
+    
+    return response.json()
+
+
+
+@app.get("/api/trainers/filter", name="Свободные тренера по дате / времени")
+def get_free_times(club_id: Optional[str] = Query(...), date: Optional[str] = Query(None), time: Optional[str] = Query(None), utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    trainers = {
+        "result": True,
+        "data": []
+    }
+    
+    response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
+    rj = response.json()
+    # Получили тренеров и заменили фотки на локальный сервер (1С не даёт смотреть фото без авторизации)
+    if rj['result']:
+        for item in rj['data']:
+            if item['photo']:
+                photo_name = os.path.basename(urlparse(item['photo']).path)
+                check_photo = os.path.exists('images/' + photo_name)
+                if check_photo:
+                    item['photo'] = SERVER_IMAGES + photo_name
+                else:
+                    photo_read = session.get(item['photo'])
+                    photo_write = open('images/' + photo_name, 'wb')
+                    photo_write.write(photo_read.content)
+                    photo_write.close()
+                    item['photo'] = SERVER_IMAGES + photo_name
+                    
+        
+        date_base = datetime.strptime(date, '%Y-%m-%d')
+        date_next = date_base + timedelta(days=1)
+        date_modified = datetime.strptime(date_next.strftime('%Y-%m-%d'), '%Y-%m-%d')
+        
+        for item in rj['data']:
+            response_times = session.get(
+                API_LIST['times'], 
+                params={'club_id': club_id, 'employee_id': item['id'], 'start_date': date, 'end_date': date_modified.date()}, 
+                headers={'usertoken': utoken, 'apikey': key}
+            )
+            
+            rtj = response_times.json()['data']
+            
+            if len(rtj):
+                if time:
+                    for item_time in rtj:
+                        if item_time['time'] == time:
+                            trainers['data'].append(item)
+                else:
+                    trainers['data'].append(item)
+        
+    return trainers
+
+
+@app.get("/api/trainers", name="Свободные тренера и время")
+def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = Query(None), time: Optional[str] = Query(None), utoken: str = Header(...)):
+    
+    key = get_key_by_club(club_id)
+    week_name = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    month_name = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    month_short_name = ['Янв', 'Фев', 'Мар', 'Апр', 'Мая', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Нояб', 'Дек']
+    services = {}
+    trainers = {
+        "result": True,
+        "data": {
+            "club_id": None,
+            #"club_object": None,
+            #"timetable": [],
+            #"calendar": [],
+            "trainers": []
+        }
+    }
+    
+    def get_calendar_day(date):
+        date = datetime.fromisoformat(date)
+        return {
+            'id': datetime.strftime(date, '%Y-%m-%d'),
+            'day': date.day,
+            'day_name': week_name[date.isoweekday() - 1],
+            'month_number': date.month,
+            'month_name' : month_name[date.month - 1],
+            'month_short_number': str(date.day) + ' ' + month_short_name[date.month - 1],
+            'date_iso': datetime.strftime(date, '%Y-%m-%d'),
+            'year': date.year,
+            'today': datetime.strftime(date, '%Y-%m-%d') == datetime.strftime(datetime.today(), '%Y-%m-%d') if True else False
+        }
+        
+    
+    """
+    ПОЛУЧАЕМ СПИСОК УСЛУГ ДЛЯ ТРЕНЕРОВ И СТУДИИ
+    """
+    service_response = session.get(API_LIST['services'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
+    service_response_json = service_response.json()
+    
+    if service_response_json['result']:
+        for item_service in service_response_json['data']:
+            if item_service['title'] == "Персональная тренировка":
+                services['trainer'] = item_service['id']
+            elif item_service['title'] == "АРЕНДА СТУДИИ ДЛЯ ТРЕНЕРА":
+                services['office'] = item_service['id']
+        
+    
+    
+    """
+    ПОЛУЧАЕМ СПИСОК ТРЕНЕРОВ ДЛЯ СТУДИИ
+    """
+    response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
+    rj = response.json()
+    if rj['result']:
+        for item in rj['data']:
+            # Получили тренеров и заменили фотки на локальный сервер (1С не даёт смотреть фото без авторизации)
+            if item['photo']:
+                photo_name = os.path.basename(urlparse(item['photo']).path)
+                check_photo = os.path.exists('images/' + photo_name)
+                if check_photo:
+                    item['photo'] = SERVER_IMAGES + photo_name
+                else:
+                    photo_read = session.get(item['photo'])
+                    photo_write = open('images/' + photo_name, 'wb')
+                    photo_write.write(photo_read.content)
+                    photo_write.close()
+                    item['photo'] = SERVER_IMAGES + photo_name
+        
+            # Если это студия а не тренер, записываем главный ID
+            if not item['position']['id']:
+                trainers['data']['club_id'] = item['id']
+                #trainers['data']['club_object'] = item
+        
+        
+            """
+            ПОЛУЧАЕМ ВРЕМЯ ТРЕНЕРА С ПАРАМЕТРОМ УСЛУГИ
+            """
+            service_id = None
+            if item['id'] == trainers['data']['club_id']:
+                service_id = services['office']
+            else:
+                service_id = services['trainer']
+                
+            response_times = session.get(
+                API_LIST['times'], 
+                params={'club_id': club_id, 'employee_id': item['id'], 'service_id': service_id}, 
+                headers={'usertoken': utoken, 'apikey': key}
+            )
+            
+            response_times_json = response_times.json()['data']
+            if len(response_times_json):
+                times = {}
+                
+                for item_time in response_times_json:
+                    item_date_convert = datetime.fromisoformat(item_time['date_time'])
+                    item_date_string = datetime.strftime(item_date_convert, '%Y-%m-%d')
+                    item_hour = int(datetime.strftime(item_date_convert, '%H'))
+                    item_season = None
+
+                    # Определяем время суток
+                    if item_hour >= int('06') and item_hour <= int('11'): item_season = 'morning'
+                    if item_hour >= int('12') and item_hour <= int('17'): item_season = 'day'
+                    if item_hour >= int('18') and item_hour <= int('23'): item_season = 'evening'
+                    if item_hour >= int('00') and item_hour <= int('05'): item_season = 'night'
+                    
+                    if not item_date_string in times:
+                        times[item_date_string] = {
+                            "morning": {
+                                "season": 'morning',
+                                "season_name": 'Утро',
+                                "time_list": []
+                            },
+                            "day": {
+                                "season": 'day',
+                                "season_name": 'День',
+                                "time_list": []
+                            },
+                            "evening": {
+                                "season": 'evening',
+                                "season_name": 'Вечер',
+                                "time_list": []
+                            },
+                            "night": {
+                                "season": 'night',
+                                "season_name": 'Ночь',
+                                "time_list": []
+                            }
+                        }
+                    
+                    times[item_date_string][item_season]['time_list'].append({
+                            'time': item_time['time'],
+                            'status': 'free'
+                        })
+                    
+                """    
+                if item['id'] == trainers['data']['club_id']:
+                    calendar = {}
+                    for item_time in response_times_json:
+                        item_date_convert = datetime.fromisoformat(item_time['date_time'])
+                        calendar[datetime.strftime(item_date_convert, '%Y-%m-%d')] = get_calendar_day(item_time['date_time'])
+                        
+                    #trainers['data']['timetable'].append(response_times_json)
+                    trainers['data']['calendar'] = calendar
+                    trainers['data']['times'] = times
+                else:
+                """
+                calendar = {}
+                date_times = {}
+                for item_time in response_times_json:
+                    item_date_convert = datetime.fromisoformat(item_time['date_time'])
+                    item_date_string = datetime.strftime(item_date_convert, '%Y-%m-%d')
+                    calendar[item_date_string] = get_calendar_day(item_time['date_time'])
+                    
+                    if not item_date_string in date_times:
+                        date_times[item_date_string] = []
+                        
+                    date_times[item_date_string].append(item_time['time'])
+                    
+                #item['timetable'] = response_times_json
+                item['calendar'] = calendar
+                item['times'] = times
+                item['date_times'] = date_times
+                trainers['data']['trainers'].append(item)
+        
+    return trainers
