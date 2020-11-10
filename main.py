@@ -40,10 +40,16 @@ API_LIST = {
     'reg_and_auth_client': API_ADDR + 'reg_and_auth_client/',
     
     'client': API_ADDR + 'client/',
+    'tickets': API_ADDR + 'tickets/',
+    'appoint': API_ADDR + 'appointment/', 
+    'appointments': API_ADDR + 'appointments/',
+    
     'clubs': API_ADDR + 'clubs/',
     'trainers': API_ADDR + 'appointment_trainers/',
     'times': API_ADDR + 'appointment_times/',
-    'services': API_ADDR + 'appointment_services/'
+    'services': API_ADDR + 'appointment_services/',
+    
+    'shop': API_ADDR + 'price_list/'
 }
 
 # Авторизуемся на сервере API
@@ -199,8 +205,68 @@ def login(item: ModelAuth):
 @app.get("/api/client", name="Получить клиента")
 def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     key = get_key_by_club(club_id)
-    response = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
-    return response.json()
+    client_object = {
+        'office_id': None,
+        'info': {},
+        'subscriptions': {},
+        'workouts': [],
+        'workouts_history': {},
+        'cabinet': {
+            'cover': 'https://i.pinimg.com/originals/2c/84/0e/2c840e86d494c5e809f850b00a69ad29.jpg',
+            'is_editable': True
+        }
+    }
+    
+    client_response = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
+    client_json = client_response.json()
+    
+    tickets_response = session.get(API_LIST['tickets'], headers={'usertoken': utoken, 'apikey': key})
+    tickets_json = tickets_response.json()
+    
+    def get_category(title):
+        categories = {
+            'Пробная тренировка с тренером':'trainer',
+            'Разовая тренировка с тренером':'trainer',
+            'Пакет из 4 тренировок с тренером':'trainer',
+            'Пакет из 8 тренировок с тренером':'trainer',
+            'Пакет из 12 тренировок с тренером':'trainer'
+        }
+        
+        for item in categories:
+            if item == title:
+                return categories[item]
+    
+    if tickets_json['result']:
+        for item_ticket in tickets_json['data']:
+            item_ticket['category_type'] = get_category(item_ticket['title'])
+            
+    
+    appointments_response = session.get(API_LIST['appointments'], headers={'usertoken': utoken, 'apikey': key})
+    appointments_json = appointments_response.json()
+    
+    if appointments_json['result'] and (len(appointments_json['data']) > 0):
+        for item_app in appointments_json['data']:
+            app_club_id = item_app['club_id']
+            app_appointment_id = item_app['appointment_id']
+            app_key = get_key_by_club(app_club_id)
+            
+            appoint_response = session.get(API_LIST['appoint'], 
+                        params={'club_id': app_club_id,'appointment_id': app_appointment_id}, 
+                        headers={'usertoken': utoken, 'apikey': app_key})
+            appoint_json = appoint_response.json()
+            
+            
+            if appoint_json['result']:
+                if not appoint_json['data']['canceled']:
+                    client_object['workouts'].append(appoint_json['data'])
+        
+    client_object['office_id'] = client_json['data']['club']['id']
+    client_object['info'] = client_json['data']
+    client_object['subscriptions'] = tickets_json['data']
+        
+    return {'result': True, 'data': client_object}
+
+
 
 class ModelClientUpdate(BaseModel):
     club: Optional[str] = Field(None, title='Идентификатор клуба')
@@ -219,107 +285,12 @@ def update_client(item: ModelClientUpdate, utoken: str = Header(...)):
         if v is not None:
             item_clear[k] = v
             
-    print(item_clear)
     response = session.put(API_LIST['client'], json=item_clear, headers={'usertoken': utoken})
+    print(response.content)
     return response.json();
 
 
 # РАБОТА С ТРЕНЕРАМИ
-
-@app.get("/api/trainers/old", name="Получить тренеров")
-def get_trainers(utoken: str = Header(...), club_id: str = Header(...)):
-    key = get_key_by_club(club_id)
-    response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
-    rj = response.json()
-    
-    if rj['result']:
-        for item in rj['data']:
-            if item['photo']:
-                photo_name = os.path.basename(urlparse(item['photo']).path)
-                check_photo = os.path.exists('images/' + photo_name)
-                if check_photo:
-                    item['photo'] = SERVER_IMAGES + photo_name
-                else:
-                    photo_read = session.get(item['photo'])
-                    photo_write = open('images/' + photo_name, 'wb')
-                    photo_write.write(photo_read.content)
-                    photo_write.close()
-                    item['photo'] = SERVER_IMAGES + photo_name
-        
-    return rj
-
-
-@app.get("/api/trainers/times", name="Свободное время / тренеров")
-def get_free_times(club_id: Optional[str] = Query(...), employee_id: Optional[str] = Query(None), utoken: str = Header(...)):
-    key = get_key_by_club(club_id)
-    
-    if not employee_id:
-        response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
-        rj = response.json()
-        
-        for item in rj['data']:
-            if not item['position']['id']:
-                employee_id = item['id']
-    
-    response = session.get(
-        API_LIST['times'], 
-        params={'club_id': club_id, 'employee_id': employee_id}, 
-        headers={'usertoken': utoken, 'apikey': key}
-    )
-    
-    return response.json()
-
-
-
-@app.get("/api/trainers/filter", name="Свободные тренера по дате / времени")
-def get_free_times(club_id: Optional[str] = Query(...), date: Optional[str] = Query(None), time: Optional[str] = Query(None), utoken: str = Header(...)):
-    key = get_key_by_club(club_id)
-    trainers = {
-        "result": True,
-        "data": []
-    }
-    
-    response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
-    rj = response.json()
-    # Получили тренеров и заменили фотки на локальный сервер (1С не даёт смотреть фото без авторизации)
-    if rj['result']:
-        for item in rj['data']:
-            if item['photo']:
-                photo_name = os.path.basename(urlparse(item['photo']).path)
-                check_photo = os.path.exists('images/' + photo_name)
-                if check_photo:
-                    item['photo'] = SERVER_IMAGES + photo_name
-                else:
-                    photo_read = session.get(item['photo'])
-                    photo_write = open('images/' + photo_name, 'wb')
-                    photo_write.write(photo_read.content)
-                    photo_write.close()
-                    item['photo'] = SERVER_IMAGES + photo_name
-                    
-        
-        date_base = datetime.strptime(date, '%Y-%m-%d')
-        date_next = date_base + timedelta(days=1)
-        date_modified = datetime.strptime(date_next.strftime('%Y-%m-%d'), '%Y-%m-%d')
-        
-        for item in rj['data']:
-            response_times = session.get(
-                API_LIST['times'], 
-                params={'club_id': club_id, 'employee_id': item['id'], 'start_date': date, 'end_date': date_modified.date()}, 
-                headers={'usertoken': utoken, 'apikey': key}
-            )
-            
-            rtj = response_times.json()['data']
-            
-            if len(rtj):
-                if time:
-                    for item_time in rtj:
-                        if item_time['time'] == time:
-                            trainers['data'].append(item)
-                else:
-                    trainers['data'].append(item)
-        
-    return trainers
-
 
 @app.get("/api/trainers", name="Свободные тренера и время")
 def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = Query(None), time: Optional[str] = Query(None), utoken: str = Header(...)):
@@ -487,3 +458,54 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
                 trainers['data']['trainers'].append(item)
         
     return trainers
+
+
+# АБОНЕМЕНТЫ МАГАЗИН
+
+@app.get("/api/shop/products", name="Абонементы / каталог товаров")
+def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    subscriptions = {
+        'first': {
+            'trainer': []
+        },
+        'once': {
+            'office': [],
+            'trainer': []  
+        },
+        'package': {
+            'office': [],
+            'trainer': []
+        }
+    }
+    
+    def get_category(title):
+        categories = {
+            'Пробная тренировка с тренером': {'first': 'trainer'},
+            'Разовая тренировка с тренером': {'once': 'trainer'},
+            'Пакет из 4 тренировок с тренером': {'package':'trainer'},
+            'Пакет из 8 тренировок с тренером': {'package':'trainer'},
+            'Пакет из 12 тренировок с тренером': {'package':'trainer'}
+        }
+        
+        for item in categories:
+            if item == title:
+                return categories[item]
+    
+    response = session.get(API_LIST['shop'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})    
+    response_json = response.json()
+    
+    if response_json['result']:
+        data = response_json['data']
+        for item in data:
+            category = get_category(item['title'])
+            
+            if category:
+                type_category = next(iter(category)) # Получаем название первого индекса
+                item['category_type'] = category[type_category]
+                subscriptions[type_category][category[type_category]] = item
+            
+    return {
+        'result': True,
+        'data': subscriptions
+    }
