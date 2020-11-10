@@ -45,7 +45,10 @@ API_LIST = {
     'appointments': API_ADDR + 'appointments/',
     
     'clubs': API_ADDR + 'clubs/',
+    
     'trainers': API_ADDR + 'appointment_trainers/',
+    'employee': API_ADDR + 'employee/',
+    
     'times': API_ADDR + 'appointment_times/',
     'services': API_ADDR + 'appointment_services/',
     
@@ -292,9 +295,37 @@ def update_client(item: ModelClientUpdate, utoken: str = Header(...)):
 
 # РАБОТА С ТРЕНЕРАМИ
 
+# Получаем информацию о тренере
+@app.get("/api/trainers/detail")
+def get_trainer_detail(club_id: Optional[str] = Query(...), employee_id: Optional[str] = Query(...), utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    
+    employee_response = session.get(API_LIST['employee'], 
+                                    params={'club_id': club_id, 'employee_id': employee_id}, 
+                                    headers={'usertoken': utoken, 'apikey': key})
+    employee_response_json = employee_response.json()
+    
+    if employee_response_json['result']:
+        data = employee_response_json['data']
+        if data['photo']:
+            photo_name = os.path.basename(urlparse(data['photo']).path)
+            check_photo = os.path.exists('images/' + photo_name)
+            if check_photo:
+                data['photo'] = SERVER_IMAGES + photo_name
+            else:
+                photo_read = session.get(data['photo'])
+                photo_write = open('images/' + photo_name, 'wb')
+                photo_write.write(photo_read.content)
+                photo_write.close()
+                data['photo'] = SERVER_IMAGES + photo_name
+                
+        return {'result': True, 'data': data}
+    return employee_response_json
+
+
+# Получаем данные о тренерах с рассписанием
 @app.get("/api/trainers", name="Свободные тренера и время")
 def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = Query(None), time: Optional[str] = Query(None), utoken: str = Header(...)):
-    
     key = get_key_by_club(club_id)
     week_name = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     month_name = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
