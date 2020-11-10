@@ -208,11 +208,18 @@ def login(item: ModelAuth):
 @app.get("/api/client", name="Получить клиента")
 def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     key = get_key_by_club(club_id)
+    week_name = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    month_name = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    month_short_name = ['Янв', 'Фев', 'Мар', 'Апр', 'Мая', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Нояб', 'Дек']
     client_object = {
         'office_id': None,
         'info': {},
         'subscriptions': {},
-        'workouts': [],
+        'workouts': {
+            'reserved': [],
+            'active': [],
+            'count': 0
+        },
         'workouts_history': {},
         'cabinet': {
             'cover': 'https://i.pinimg.com/originals/2c/84/0e/2c840e86d494c5e809f850b00a69ad29.jpg',
@@ -225,6 +232,21 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     
     tickets_response = session.get(API_LIST['tickets'], headers={'usertoken': utoken, 'apikey': key})
     tickets_json = tickets_response.json()
+    
+    def get_calendar_day(date):
+        date = datetime.fromisoformat(date)
+        return {
+            'id': datetime.strftime(date, '%Y-%m-%d'),
+            'day': date.day,
+            'day_name': week_name[date.isoweekday() - 1],
+            'month_number': date.month,
+            'month_name' : month_name[date.month - 1],
+            'month_short_number': str(date.day) + ' ' + month_short_name[date.month - 1],
+            'date_iso': datetime.strftime(date, '%Y-%m-%d'),
+            'year': date.year,
+            'today': datetime.strftime(date, '%Y-%m-%d') == datetime.strftime(datetime.today(), '%Y-%m-%d') if True else False,
+            'time': datetime.strftime(date, '%H:%M')
+        }
     
     def get_category(title):
         categories = {
@@ -261,7 +283,48 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             
             if appoint_json['result']:
                 if not appoint_json['data']['canceled']:
-                    client_object['workouts'].append(appoint_json['data'])
+                    """
+                    СОХРАНЯЕМ ФОТО С СЕРВЕРА НА СВОЙ
+                    """
+                    if appoint_json['data']['employee']['photo']:
+                        photo_name = os.path.basename(urlparse(appoint_json['data']['employee']['photo']).path)
+                        check_photo = os.path.exists('images/' + photo_name)
+                        if check_photo:
+                            appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
+                        else:
+                            photo_read = session.get(data['photo'])
+                            photo_write = open('images/' + photo_name, 'wb')
+                            photo_write.write(photo_read.content)
+                            photo_write.close()
+                            appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
+                    
+                    
+                    # Устанавливаем категории для записи
+                    if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала':
+                        appoint_json['data']['category_type'] = 'office'
+                    else:
+                        appoint_json['data']['category_type'] = 'trainer'
+                        
+                    # Категории для статуса    
+                    if appoint_json['data']['status'] == 'reserved' or appoint_json['data']['status'] == 'temporarily_reserved_need_payment':
+                        appoint_json['data']['status_type'] = 'reserved'
+                    else:
+                        appoint_json['data']['status_type'] = 'active'
+                        
+                        
+                    # Добавляем разделенные имя и фамилию
+                    employee_name = appoint_json['data']['employee']['name'].split()
+                    if employee_name[0]:
+                        appoint_json['data']['employee']['surname'] = employee_name[0]
+                        
+                    if employee_name[1]:
+                        appoint_json['data']['employee']['firstname'] = employee_name[1]
+                        
+                    # Преобразуем дату в дату с параметрами    
+                    appoint_json['data']['date_object'] = get_calendar_day(appoint_json['data']['start_date'])
+                    status_type = appoint_json['data']['status_type']
+                    client_object['workouts'][status_type].append(appoint_json['data'])
+                    client_object['workouts']['count']+= 1
         
     client_object['office_id'] = client_json['data']['club']['id']
     client_object['info'] = client_json['data']
@@ -294,6 +357,19 @@ def update_client(item: ModelClientUpdate, utoken: str = Header(...)):
 
 
 # РАБОТА С ТРЕНЕРАМИ
+
+# Отменяем тренеровку
+@app.get("/api/training/cancel")
+def get_training_cancel(club_id: Optional[str] = Query(...), appointment_id: Optional[str] = Query(...), utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    
+    app_response = session.delete(API_LIST['appoint'], 
+                                    params={'club_id': club_id, 'appointment_id': appointment_id}, 
+                                    headers={'usertoken': utoken, 'apikey': key})
+    app_response_json = app_response.json()
+    
+    return app_response_json
+
 
 # Получаем информацию о тренере
 @app.get("/api/trainers/detail")
