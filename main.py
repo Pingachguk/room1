@@ -16,7 +16,8 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 
 origins = [
     "http://localhost:8080",
-    "http://127.0.0.1:8080"
+    "http://127.0.0.1:8080",
+    "http://192.168.43.235:8080"
 ]
 
 app.add_middleware(
@@ -28,6 +29,7 @@ app.add_middleware(
 )
 
 SERVER_IMAGES = 'http://127.0.0.1:8000/images/'
+#SERVER_IMAGES = 'http://192.168.43.235:8000/images/'
 API_KEY = '1a5a6f3b-4504-40b7-b286-14941fd2f635'
 APP_BASIC_LOGIN = 'ServiceUserAPI'
 APP_BASIC_PASSWORD = 'Gu3nevehexusihuquhycywesukuciv'
@@ -99,7 +101,7 @@ def get_clubs():
     return clubs
     """
     
-    result = [{"id":"bf1e201a-01c3-11eb-bbdb-005056838e97","name":"FITROOM.RU - пр-т Маршала Блюхера 6","address":"FITROOM.RU - пр-т Маршала Блюхера 6","city_code":None,"city":None},{"id":"a23e2522-e7ad-11ea-bbd8-005056838e97","name":"FITROOM.RU - В.О. наб. реки Смоленки, ЖК Самоцветы","address":"FITROOM.RU - В.О. наб. реки Смоленки, ЖК Самоцветы","city_code":None,"city":None},{"id":"e64f0bc2-0652-11eb-bbdb-005056838e97","name":"FITROOM.RU - Выборгское шоссе ","address":"FITROOM.RU - Выборгское шоссе ","city_code":None,"city":None},{"id":"22bd71b4-e7af-11ea-bbd8-005056838e97","name":"FITROOM.RU - Загребский бульвар, ЖК Радуга.","address":"FITROOM.RU - Загребский бульвар, ЖК Радуга.","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"FITROOM.RU - Каштановая аллея, Новый Оккервиль","address":"FITROOM.RU - Каштановая аллея, Новый Оккервиль","city_code":None,"city":None},{"id":"630de9d9-e7ae-11ea-bbd8-005056838e97","name":"FITROOM.RU - Лыжный переулок","address":"FITROOM.RU - Лыжный переулок","city_code":None,"city":None},{"id":"cb28be84-0651-11eb-bbdb-005056838e97","name":"FITROOM.RU - МОСКВА  3-Донской проезд ","address":"FITROOM.RU - МОСКВА  3-Донской проезд ","city_code":None,"city":None},{"id":"39158ee8-e79e-11ea-bbd8-005056838e97","name":"FITROOM.RU - Московский пр.  ЖК Граф Орлов","address":"FITROOM.RU - Московский пр.  ЖК Граф Орлов","city_code":None,"city":None},{"id":"97a2081f-e7ac-11ea-bbd8-005056838e97","name":"FITROOM.RU - Московский пр., ЖК Времена Года","address":"FITROOM.RU - Московский пр., ЖК Времена Года","city_code":None,"city":None},{"id":"d2c3b3d6-e7ad-11ea-bbd8-005056838e97","name":"FITROOM.RU - П.С., ул. Ждановская, ЖК Премьер Палас","address":"FITROOM.RU - П.С., ул. Ждановская, ЖК Премьер Палас","city_code":None,"city":None},{"id":"37948207-e7ae-11ea-bbd8-005056838e97","name":"FITROOM.RU - пр. Маршала Блюхера, ЖК Фламинго.","address":"FITROOM.RU - пр. Маршала Блюхера, ЖК Фламинго.","city_code":None,"city":None},{"id":"64b8476a-e7ad-11ea-bbd8-005056838e97","name":"FITROOM.RU - пр. Юрия Гагарина  ЖК Космос","address":"FITROOM.RU - пр. Юрия Гагарина  ЖК Космос","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"FITROOM.RU - Каштановая аллея, Новый Оккервиль","address":"FITROOM.RU - Каштановая аллея, Новый Оккервиль","city_code":None,"city":None},{"id":"915d3c3b-daff-11ea-bbd8-005056838e97","name":"FITROOM.RU - Пушкин Московское шоссе ","address":"FITROOM.RU - Пушкин Московское шоссе ","city_code":None,"city":None},{"id":"603cb73d-e7af-11ea-bbd8-005056838e97","name":"FITROOM.RU - ул. Дыбенко,  ЖК Ренессанс","address":"FITROOM.RU - ул. Дыбенко,  ЖК Ренессанс","city_code":None,"city":None},{"id":"42632fd3-e7af-11ea-bbd8-005056838e97","name":"FITROOM.RU - ул. Красного Текстильщика","address":"FITROOM.RU - ул. Красного Текстильщика","city_code":None,"city":None},{"id":"15281aec-07c8-11eb-bbdb-005056838e97","name":"FITROOM.RU- САМАРА Парковый переулок","address":"FITROOM.RU- САМАРА Парковый переулок","city_code":None,"city":None}];
+    result = [{"id":"bf1e201a-01c3-11eb-bbdb-005056838e97","name":"пр-т Маршала Блюхера, 6к2","address":"пр-т Маршала Блюхера, 6к2","city_code":None,"city":None},{"id":"a23e2522-e7ad-11ea-bbd8-005056838e97","name":"набережная реки Смоленки, 3к1, ЖК \"Самоцветы\"","address":"набережная реки Смоленки, 3к1, ЖК \"Самоцветы\"","city_code":None,"city":None},{"id":"e64f0bc2-0652-11eb-bbdb-005056838e97","name":"FITROOM.RU - Выборгское шоссе ","address":"FITROOM.RU - Выборгское шоссе ","city_code":None,"city":None},{"id":"22bd71b4-e7af-11ea-bbd8-005056838e97","name":"Загребский бульвар, 9, ЖК \"Радуга\"","address":"Загребский бульвар, 9, ЖК \"Радуга\"","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, 2","address":"Кудрово, Каштановая аллея, 2","city_code":None,"city":None},{"id":"630de9d9-e7ae-11ea-bbd8-005056838e97","name":"Лыжный переулок, 2","address":"Лыжный переулок, 2","city_code":None,"city":None},{"id":"cb28be84-0651-11eb-bbdb-005056838e97","name":"Мск, 3-й Донской проезд, 1","address":"Мск, 3-й Донской проезд, 1","city_code":None,"city":None},{"id":"39158ee8-e79e-11ea-bbd8-005056838e97","name":"Московский пр-т, 183-185, ЖК \"Граф Орлов\"","address":"Московский пр-т, 183-185, ЖК \"Граф Орлов\"","city_code":None,"city":None},{"id":"97a2081f-e7ac-11ea-bbd8-005056838e97","name":"Московский пр-т, 75, ЖК \"Времена года\"","address":"Московский пр-т, 75, ЖК \"Времена года\"","city_code":None,"city":None},{"id":"d2c3b3d6-e7ad-11ea-bbd8-005056838e97","name":"Ждановская ул., д.43, кор. 1, ЖК \"Премьер Палас\"","address":"Ждановская ул., д.43, кор. 1, ЖК \"Премьер Палас\"","city_code":None,"city":None},{"id":"37948207-e7ae-11ea-bbd8-005056838e97","name":"пр-т Маршала Блюхера, 9к1, ЖК \"Фламинго\"","address":"пр-т Маршала Блюхера, 9к1, ЖК \"Фламинго\"","city_code":None,"city":None},{"id":"64b8476a-e7ad-11ea-bbd8-005056838e97","name":"пр-т Юрия Гагарина, 7","address":"пр-т Юрия Гагарина, 7","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, 2","address":"Кудрово, Каштановая аллея, 2","city_code":None,"city":None},{"id":"915d3c3b-daff-11ea-bbd8-005056838e97","name":"Пушкин, Московское шоссе, 34","address":"Пушкин, Московское шоссе, 34","city_code":None,"city":None},{"id":"603cb73d-e7af-11ea-bbd8-005056838e97","name":"ул. Дыбенко, 8к3, ЖК \"Ренессанс\"","address":"ул. Дыбенко, 8к3, ЖК \"Ренессанс\"","city_code":None,"city":None},{"id":"42632fd3-e7af-11ea-bbd8-005056838e97","name":"ул. Красного Текстильщика, 7","address":"ул. Красного Текстильщика, 7","city_code":None,"city":None},{"id":"15281aec-07c8-11eb-bbdb-005056838e97","name":"Самара, Парковый переулок, 5","address":"Самара, Парковый переулок, 5","city_code":None,"city":None}] 
     return result
 # РАБОТА С АВТОРИЗАЦИЕЙ
 
@@ -213,6 +215,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     month_short_name = ['Янв', 'Фев', 'Мар', 'Апр', 'Мая', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Нояб', 'Дек']
     client_object = {
         'office_id': None,
+        'is_verified': False,
         'info': {},
         'subscriptions': {},
         'workouts': {
@@ -260,10 +263,28 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
         for item in categories:
             if item == title:
                 return categories[item]
+            
+    def get_flags(title):
+        categories = {
+            'Пробная тренировка с тренером':'trainer:first',
+            'Разовая тренировка с тренером':'trainer:once',
+            'Пакет из 4 тренировок с тренером':'trainer:package',
+            'Пакет из 8 тренировок с тренером':'trainer:package',
+            'Пакет из 12 тренировок с тренером':'trainer:package'
+        }
+        
+        for item in categories:
+            if item == title:
+                return categories[item]
     
     if tickets_json['result']:
+        client_object['subscription_flags'] = {'trainer': [], 'office': []}
         for item_ticket in tickets_json['data']:
-            item_ticket['category_type'] = get_category(item_ticket['title'])
+            # status not_active ? при 0 на абонементе / показывать при active если 0?
+            item_ticket['category_type'] = get_category(item_ticket['title'].strip())
+            getter_flags = get_flags(item_ticket['title'].strip()).split(':')
+            if getter_flags:
+                client_object['subscription_flags'][getter_flags[0]].append(getter_flags[1])
             
     
     appointments_response = session.get(API_LIST['appointments'], headers={'usertoken': utoken, 'apikey': key})
@@ -329,6 +350,8 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     client_object['office_id'] = client_json['data']['club']['id']
     client_object['info'] = client_json['data']
     client_object['subscriptions'] = tickets_json['data']
+    
+    # is_verified code
         
     return {'result': True, 'data': client_object}
 
@@ -410,7 +433,8 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
     trainers = {
         "result": True,
         "data": {
-            "club_id": None,
+            "club_id": club_id,
+            "office_id": None,
             #"club_object": None,
             #"timetable": [],
             #"calendar": [],
@@ -453,6 +477,8 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
     """
     response = session.get(API_LIST['trainers'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})
     rj = response.json()
+    
+    
     if rj['result']:
         for item in rj['data']:
             # Получили тренеров и заменили фотки на локальный сервер (1С не даёт смотреть фото без авторизации)
@@ -468,9 +494,13 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
                     photo_write.close()
                     item['photo'] = SERVER_IMAGES + photo_name
         
+            
             # Если это студия а не тренер, записываем главный ID
             if not item['position']['id']:
-                trainers['data']['club_id'] = item['id']
+                trainers['data']['office_id'] = item['id']
+                name_split = item['name'].split()
+                item['name'] = name_split[0] + ' ' + name_split[1] 
+                print(item['name'])
                 #trainers['data']['club_object'] = item
         
         
@@ -478,7 +508,7 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
             ПОЛУЧАЕМ ВРЕМЯ ТРЕНЕРА С ПАРАМЕТРОМ УСЛУГИ
             """
             service_id = None
-            if item['id'] == trainers['data']['club_id']:
+            if item['id'] == trainers['data']['office_id']:
                 service_id = services['office']
             else:
                 service_id = services['trainer']
@@ -534,18 +564,6 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
                             'status': 'free'
                         })
                     
-                """    
-                if item['id'] == trainers['data']['club_id']:
-                    calendar = {}
-                    for item_time in response_times_json:
-                        item_date_convert = datetime.fromisoformat(item_time['date_time'])
-                        calendar[datetime.strftime(item_date_convert, '%Y-%m-%d')] = get_calendar_day(item_time['date_time'])
-                        
-                    #trainers['data']['timetable'].append(response_times_json)
-                    trainers['data']['calendar'] = calendar
-                    trainers['data']['times'] = times
-                else:
-                """
                 calendar = {}
                 date_times = {}
                 for item_time in response_times_json:
@@ -605,14 +623,55 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
     if response_json['result']:
         data = response_json['data']
         for item in data:
-            category = get_category(item['title'])
+            category = get_category(item['title'].strip())
             
             if category:
-                type_category = next(iter(category)) # Получаем название первого индекса
+                # Получаем название первого индекса с названием категории
+                type_category = next(iter(category))
                 item['category_type'] = category[type_category]
-                subscriptions[type_category][category[type_category]] = item
+                subscriptions[type_category][category[type_category]].append(item)
             
     return {
         'result': True,
         'data': subscriptions
     }
+    
+    
+class ModelSubscriptionWrite(BaseModel):
+    club_id: Optional[str] = Field(...)
+    employee_id: Optional[str] = Field(...)
+    date: Optional[str] = Field(...)
+    time: Optional[str] = Field(...)
+
+
+# ЗАПИСЬ НА ТРЕНЕРОВКУ С АБОНЕМЕНТА
+@app.post("/api/subscription/write", name="Запись на тренеровку с абонемента")
+def subscriptions_write(item: ModelSubscriptionWrite,
+                        utoken: str = Header(...)):
+    
+    key = get_key_by_club(item.club_id)
+    service_id = None
+    
+    # ВЫЯСНЯЕМ ID УСЛУГИ ТРЕНЕРА
+    response_trainer = session.get(API_LIST['services'], 
+                                   params={'club_id': item.club_id, 'employee_id': item.employee_id}, 
+                                   headers={'usertoken': utoken, 'apikey': key})    
+    response_trainer_json = response_trainer.json()
+    
+    if response_trainer_json['result']:
+        if response_trainer_json['data']:
+            service_id = response_trainer_json['data'][0]['id']
+            
+            write_object = {
+                'club_id': item.club_id,
+                'employee_id': item.employee_id,
+                'service_id': service_id,
+                'date_time': item.date + ' ' + item.time
+            }
+            
+            response_write = session.post(API_LIST['appoint'],
+                                         json=write_object,
+                                         headers={'usertoken': utoken, 'apikey': key})
+            
+    return response_write.json()
+    
