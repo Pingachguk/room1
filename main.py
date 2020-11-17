@@ -1,4 +1,4 @@
-import requests
+import requests, re
 import os.path
 import urllib.request
 from urllib.parse import urlparse
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import FastAPI, Query, Header, Cookie
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 
@@ -89,20 +89,23 @@ def get_clubs():
     for key in api_keys:
         response = session.get(API_LIST['clubs'], headers={'apikey': key})
         response_json = response.json()
-        response_data = response_json['data'][0]
-        clubs.append({
-            'id': response_data['id'],
-            'name': response_data['title'],
-            'address': response_data['title'],
-            'city_code': None,
-            'city': None
-        })
+
+        if response_json['result']:
+            response_data = response_json['data'][0]
+            clubs.append({
+                'id': response_data['id'],
+                'name': response_data['title'],
+                'address': response_data['title'],
+                'city_code': None,
+                'city': None
+            })
         
     return clubs
     """
     
-    result = [{"id":"bf1e201a-01c3-11eb-bbdb-005056838e97","name":"пр-т Маршала Блюхера, 6к2","address":"пр-т Маршала Блюхера, 6к2","city_code":None,"city":None},{"id":"a23e2522-e7ad-11ea-bbd8-005056838e97","name":"набережная реки Смоленки, 3к1, ЖК \"Самоцветы\"","address":"набережная реки Смоленки, 3к1, ЖК \"Самоцветы\"","city_code":None,"city":None},{"id":"e64f0bc2-0652-11eb-bbdb-005056838e97","name":"FITROOM.RU - Выборгское шоссе ","address":"FITROOM.RU - Выборгское шоссе ","city_code":None,"city":None},{"id":"22bd71b4-e7af-11ea-bbd8-005056838e97","name":"Загребский бульвар, 9, ЖК \"Радуга\"","address":"Загребский бульвар, 9, ЖК \"Радуга\"","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, 2","address":"Кудрово, Каштановая аллея, 2","city_code":None,"city":None},{"id":"630de9d9-e7ae-11ea-bbd8-005056838e97","name":"Лыжный переулок, 2","address":"Лыжный переулок, 2","city_code":None,"city":None},{"id":"cb28be84-0651-11eb-bbdb-005056838e97","name":"Мск, 3-й Донской проезд, 1","address":"Мск, 3-й Донской проезд, 1","city_code":None,"city":None},{"id":"39158ee8-e79e-11ea-bbd8-005056838e97","name":"Московский пр-т, 183-185, ЖК \"Граф Орлов\"","address":"Московский пр-т, 183-185, ЖК \"Граф Орлов\"","city_code":None,"city":None},{"id":"97a2081f-e7ac-11ea-bbd8-005056838e97","name":"Московский пр-т, 75, ЖК \"Времена года\"","address":"Московский пр-т, 75, ЖК \"Времена года\"","city_code":None,"city":None},{"id":"d2c3b3d6-e7ad-11ea-bbd8-005056838e97","name":"Ждановская ул., д.43, кор. 1, ЖК \"Премьер Палас\"","address":"Ждановская ул., д.43, кор. 1, ЖК \"Премьер Палас\"","city_code":None,"city":None},{"id":"37948207-e7ae-11ea-bbd8-005056838e97","name":"пр-т Маршала Блюхера, 9к1, ЖК \"Фламинго\"","address":"пр-т Маршала Блюхера, 9к1, ЖК \"Фламинго\"","city_code":None,"city":None},{"id":"64b8476a-e7ad-11ea-bbd8-005056838e97","name":"пр-т Юрия Гагарина, 7","address":"пр-т Юрия Гагарина, 7","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, 2","address":"Кудрово, Каштановая аллея, 2","city_code":None,"city":None},{"id":"915d3c3b-daff-11ea-bbd8-005056838e97","name":"Пушкин, Московское шоссе, 34","address":"Пушкин, Московское шоссе, 34","city_code":None,"city":None},{"id":"603cb73d-e7af-11ea-bbd8-005056838e97","name":"ул. Дыбенко, 8к3, ЖК \"Ренессанс\"","address":"ул. Дыбенко, 8к3, ЖК \"Ренессанс\"","city_code":None,"city":None},{"id":"42632fd3-e7af-11ea-bbd8-005056838e97","name":"ул. Красного Текстильщика, 7","address":"ул. Красного Текстильщика, 7","city_code":None,"city":None},{"id":"15281aec-07c8-11eb-bbdb-005056838e97","name":"Самара, Парковый переулок, 5","address":"Самара, Парковый переулок, 5","city_code":None,"city":None}] 
+    result = [{"id":"bf1e201a-01c3-11eb-bbdb-005056838e97","name":"пр-т Маршала Блюхера, д.6, к.2","address":"пр-т Маршала Блюхера, д.6, к.2","city_code":None,"city":None},{"id":"a23e2522-e7ad-11ea-bbd8-005056838e97","name":"В.О наб.реки Смоленки, д.3, к.1, ЖК \"Самоцветы\"","address":"В.О наб.реки Смоленки, д.3, к.1, ЖК \"Самоцветы\"","city_code":None,"city":None},{"id":"22bd71b4-e7af-11ea-bbd8-005056838e97","name":"Загребский бульвар, д.9, ЖК \"Радуга\"","address":"Загребский бульвар, д.9, ЖК \"Радуга\"","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, д.2","address":"Кудрово, Каштановая аллея, д.2","city_code":None,"city":None},{"id":"630de9d9-e7ae-11ea-bbd8-005056838e97","name":"Лыжный переулок, д.2","address":"Лыжный переулок, д.2","city_code":None,"city":None},{"id":"cb28be84-0651-11eb-bbdb-005056838e97","name":"МОСКВА, 3-й Донской проезд, д.1","address":"МОСКВА, 3-й Донской проезд, д.1","city_code":None,"city":None},{"id":"39158ee8-e79e-11ea-bbd8-005056838e97","name":"пр-т Московский, д.183-185, ЖК \"Граф Орлов\"","address":"пр-т Московский, д.183-185, ЖК \"Граф Орлов\"","city_code":None,"city":None},{"id":"97a2081f-e7ac-11ea-bbd8-005056838e97","name":"пр-т Московский, д.73,к.5 ЖК \"Времена года\"","address":"пр-т Московский, д.73,к.5 ЖК \"Времена года\"","city_code":None,"city":None},{"id":"d2c3b3d6-e7ad-11ea-bbd8-005056838e97","name":"ул. Ждановская, д.43, к.1, ЖК \"Премьер Палас\"","address":"ул. Ждановская, д.43, к.1, ЖК \"Премьер Палас\"","city_code":None,"city":None},{"id":"37948207-e7ae-11ea-bbd8-005056838e97","name":"пр-т Маршала Блюхера, д.9, к.1, ЖК \"Фламинго\"","address":"пр-т Маршала Блюхера, д.9, к.1, ЖК \"Фламинго\"","city_code":None,"city":None},{"id":"64b8476a-e7ad-11ea-bbd8-005056838e97","name":"пр-т Юрия Гагарина, д.7 ЖК \"Космос\"","address":"пр-т Юрия Гагарина, д.7 ЖК \"Космос\"","city_code":None,"city":None},{"id":"d987364c-e7ae-11ea-bbd8-005056838e97","name":"Кудрово, Каштановая аллея, д.2","address":"Кудрово, Каштановая аллея, д.2","city_code":None,"city":None},{"id":"915d3c3b-daff-11ea-bbd8-005056838e97","name":"ПУШКИН, Московское шоссе, 34","address":"ПУШКИН, Московское шоссе, 34","city_code":None,"city":None},{"id":"603cb73d-e7af-11ea-bbd8-005056838e97","name":"ул. Дыбенко,д.8, к.3, ЖК \"Ренессанс\"","address":"ул. Дыбенко,д.8, к.3, ЖК \"Ренессанс\"","city_code":None,"city":None},{"id":"42632fd3-e7af-11ea-bbd8-005056838e97","name":"ул. Красного Текстильщика, д.7","address":"ул. Красного Текстильщика, д.7","city_code":None,"city":None},{"id":"15281aec-07c8-11eb-bbdb-005056838e97","name":"САМАРА, Парковый переулок, 5","address":"САМАРА, Парковый переулок, 5","city_code":None,"city":None}]
     return result
+    
 # РАБОТА С АВТОРИЗАЦИЕЙ
 
 def get_key_by_club(club_id):
@@ -119,7 +122,7 @@ def get_key_by_club(club_id):
         {"club_id": "d2c3b3d6-e7ad-11ea-bbd8-005056838e97", "key": "9c5a3bb6-16b1-48f3-9e78-84299a619fda"},
         {"club_id": "37948207-e7ae-11ea-bbd8-005056838e97", "key": "31b8db60-cb60-457f-bed0-69c9a3a65e84"},
         {"club_id": "64b8476a-e7ad-11ea-bbd8-005056838e97", "key": "6a8a7d85-4836-4ace-a495-9a5262975b83"},
-        {"club_id": "d987364c-e7ae-11ea-bbd8-005056838e97", "key": "a5d8ff5a-f6ee-421a-bd11-769fbf6b658c"},
+        #{"club_id": "d987364c-e7ae-11ea-bbd8-005056838e97", "key": "a5d8ff5a-f6ee-421a-bd11-769fbf6b658c"},
         {"club_id": "915d3c3b-daff-11ea-bbd8-005056838e97", "key": "e25f4e9d-92ec-4750-9b84-8655bb89f0ff"},
         {"club_id": "603cb73d-e7af-11ea-bbd8-005056838e97", "key": "f7bd7973-287a-4a0e-a706-745b25758182"},
         {"club_id": "42632fd3-e7af-11ea-bbd8-005056838e97", "key": "bfbce456-def7-43d0-a8f4-725176c67341"},
@@ -164,7 +167,7 @@ class ModelRegAndAuthClient(BaseModel):
     last_name: Optional[str] = Field(None, title='Фамилия')
     name: Optional[str] = Field(None, title='Имя')
     second_name: Optional[str] = Field(None, title='Отчество')
-    email: Optional[EmailStr] = Field(None, title='Адрес почты')
+    email: Optional[str] = Field(None, title='Адрес почты')
     birthday: Optional[str] = Field(None, title='Дата рождения')
     club: Optional[str] = Field(None, title='Идентификатор клуба')
     marketing: Optional[ModelMarketing] = None
@@ -250,14 +253,19 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'today': datetime.strftime(date, '%Y-%m-%d') == datetime.strftime(datetime.today(), '%Y-%m-%d') if True else False,
             'time': datetime.strftime(date, '%H:%M')
         }
-    
+        
     def get_category(title):
         categories = {
             'Пробная тренировка с тренером':'trainer',
             'Разовая тренировка с тренером':'trainer',
             'Пакет из 4 тренировок с тренером':'trainer',
             'Пакет из 8 тренировок с тренером':'trainer',
-            'Пакет из 12 тренировок с тренером':'trainer'
+            'Пакет из 12 тренировок с тренером':'trainer',
+            
+            'Разовая аренда студии': 'office',
+            'Пакет на 5 посещений': 'office',
+            'Пакет на 10 посещений': 'office',
+            'Пакет на 20 посещений': 'office'
         }
         
         for item in categories:
@@ -270,12 +278,18 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Разовая тренировка с тренером':'trainer:once',
             'Пакет из 4 тренировок с тренером':'trainer:package',
             'Пакет из 8 тренировок с тренером':'trainer:package',
-            'Пакет из 12 тренировок с тренером':'trainer:package'
+            'Пакет из 12 тренировок с тренером':'trainer:package',
+                        
+            'Разовая аренда студии': 'office:first',
+            'Пакет на 5 посещений': 'office:once',
+            'Пакет на 10 посещений': 'office:package',
+            'Пакет на 20 посещений': 'office:package'
         }
         
         for item in categories:
             if item == title:
                 return categories[item]
+            
     
     if tickets_json['result']:
         client_object['subscription_flags'] = {'trainer': [], 'office': []}
@@ -360,7 +374,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
 class ModelClientUpdate(BaseModel):
     club: Optional[str] = Field(None, title='Идентификатор клуба')
     do_not_disturb: Optional[bool] = Field(None, title="Не беспокоить")
-    email: Optional[EmailStr] = Field(None, title='Адрес почты')
+    email: Optional[str] = Field(None, title='Адрес почты')
     name: Optional[str] = Field(None, title='Имя')
     last_name: Optional[str] = Field(None, title='Фамилия')
     second_name: Optional[str] = Field(None, title='Отчество')
@@ -590,6 +604,18 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
 @app.get("/api/shop/products", name="Абонементы / каталог товаров")
 def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(...)):
     key = get_key_by_club(club_id)
+    is_verified = False
+    tech_account = {
+        'phone': '79956071411',
+        'password': '9956071411' 
+    }
+    
+    response_auth = session.post(API_LIST['auth_client'], json=tech_account)
+    response_tech_account = response_auth.json()
+    response_user_token = None
+    if response_tech_account['result']:
+        response_user_token = response_tech_account['data']['user_token']
+    
     subscriptions = {
         'first': {
             'trainer': []
@@ -604,26 +630,44 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
         }
     }
     
-    def get_category(title):
+    def get_category(item):
+        title = item['title'].strip()
+        category = item['category']['title']
+        category_slug = None
+        category_package = None
+        
+        if category == 'Аренда': category_slug = 'office'
+        if category == 'Пакеты тренировок': category_slug = 'trainer'
+        
+        if 'Пакет' in title:
+            category_package = True
+        
         categories = {
             'Пробная тренировка с тренером': {'first': 'trainer'},
             'Разовая тренировка с тренером': {'once': 'trainer'},
-            'Пакет из 4 тренировок с тренером': {'package':'trainer'},
-            'Пакет из 8 тренировок с тренером': {'package':'trainer'},
-            'Пакет из 12 тренировок с тренером': {'package':'trainer'}
+                      
+            'Разовая аренда студии': {'once': 'office'}
         }
+        
+        if category_package and category_slug:
+            return {'package': category_slug}
         
         for item in categories:
             if item == title:
                 return categories[item]
-    
-    response = session.get(API_LIST['shop'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})    
+        
+    # ЗАПРОС С ТЕХНИЧЕСКОГО АККАУНТА
+    response = session.get(API_LIST['shop'], params={'club_id': club_id}, headers={'usertoken': response_user_token, 'apikey': key})    
     response_json = response.json()
+    
+    # ЗАПРОС С КЛИЕНТСКОГО
+    response_client = session.get(API_LIST['shop'], params={'club_id': club_id}, headers={'usertoken': utoken, 'apikey': key})    
+    response_clinet_json = response_client.json()
     
     if response_json['result']:
         data = response_json['data']
         for item in data:
-            category = get_category(item['title'].strip())
+            category = get_category(item)
             
             if category:
                 # Получаем название первого индекса с названием категории
@@ -631,6 +675,21 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
                 item['category_type'] = category[type_category]
                 subscriptions[type_category][category[type_category]].append(item)
             
+    
+    if response_clinet_json['result']:
+        data = response_clinet_json['data']
+        for item in data:
+            category = get_category(item)
+            if category:
+                type_category = next(iter(category))
+                # Костыль верификации - если есть в списке абонемент
+                # на аренду то значит номенклатура существует для этого аккаунта
+                if category[type_category] == 'office':
+                    is_verified = True
+                    
+                    
+    subscriptions['is_verified'] = is_verified
+    
     return {
         'result': True,
         'data': subscriptions
