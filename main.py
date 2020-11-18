@@ -226,10 +226,22 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'active': [],
             'count': 0
         },
-        'workouts_history': {},
+        'workouts_history': [],
         'cabinet': {
             'cover': 'https://i.pinimg.com/originals/2c/84/0e/2c840e86d494c5e809f850b00a69ad29.jpg',
             'is_editable': True
+        },
+        'metrics': {
+            'training': {
+                'trainer': 0,
+                'office': 0,
+                
+                'canceled': 0,
+                'visited': 0,
+                'planned': 0,
+                'ended': 0,
+                'passes': 0
+            }
         }
     }
     
@@ -281,7 +293,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Пакет из 12 тренировок с тренером':'trainer:package',
                         
             'Разовая аренда студии': 'office:first',
-            'Пакет на 5 посещений': 'office:once',
+            'Пакет на 5 посещений': 'office:package',
             'Пакет на 10 посещений': 'office:package',
             'Пакет на 20 посещений': 'office:package'
         }
@@ -296,6 +308,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
         for item_ticket in tickets_json['data']:
             # status not_active ? при 0 на абонементе / показывать при active если 0?
             item_ticket['category_type'] = get_category(item_ticket['title'].strip())
+            item_ticket['category_subscription'] = get_flags(item_ticket['title'].strip()).split(':')[1]
             getter_flags = get_flags(item_ticket['title'].strip()).split(':')
             if getter_flags:
                 client_object['subscription_flags'][getter_flags[0]].append(getter_flags[1])
@@ -310,57 +323,83 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             app_appointment_id = item_app['appointment_id']
             app_key = get_key_by_club(app_club_id)
             
-            appoint_response = session.get(API_LIST['appoint'], 
-                        params={'club_id': app_club_id,'appointment_id': app_appointment_id}, 
-                        headers={'usertoken': utoken, 'apikey': app_key})
-            appoint_json = appoint_response.json()
+            status_name = {
+                'canceled': 'Отменено',
+                'ended': 'Завершено',
+                'passes': 'В процессе',
+                'planned': 'Ожидается'
+            }
             
+            item_app['status_name'] = status_name[item_app['status']]
+            client_object['workouts_history'].append(item_app)
             
-            if appoint_json['result']:
-                if not appoint_json['data']['canceled']:
-                    """
-                    СОХРАНЯЕМ ФОТО С СЕРВЕРА НА СВОЙ
-                    """
-                    if appoint_json['data']['employee']['photo']:
-                        photo_name = os.path.basename(urlparse(appoint_json['data']['employee']['photo']).path)
-                        check_photo = os.path.exists('images/' + photo_name)
-                        if check_photo:
-                            appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
+            if item_app['status'] != 'canceled':
+                client_object['metrics']['training'][item_app['status']]+= 1
+
+                
+                appoint_response = session.get(API_LIST['appoint'], 
+                            params={'club_id': app_club_id,'appointment_id': app_appointment_id}, 
+                            headers={'usertoken': utoken, 'apikey': app_key})
+                appoint_json = appoint_response.json()
+                
+                
+                if appoint_json['result']:
+                    if not appoint_json['data']['canceled']:
+                        
+                        client_object['metrics']['training']['canceled']+= 1
+                        
+                        """
+                        СОХРАНЯЕМ ФОТО С СЕРВЕРА НА СВОЙ
+                        """
+                        if appoint_json['data']['employee']['photo']:
+                            photo_name = os.path.basename(urlparse(appoint_json['data']['employee']['photo']).path)
+                            check_photo = os.path.exists('images/' + photo_name)
+                            if check_photo:
+                                appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
+                            else:
+                                photo_read = session.get(data['photo'])
+                                photo_write = open('images/' + photo_name, 'wb')
+                                photo_write.write(photo_read.content)
+                                photo_write.close()
+                                appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
+                        
+                        
+                        # Устанавливаем категории для записи
+                        if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала':
+                            appoint_json['data']['category_type'] = 'office'
+                            client_object['metrics']['training']['office']+= 1
                         else:
-                            photo_read = session.get(data['photo'])
-                            photo_write = open('images/' + photo_name, 'wb')
-                            photo_write.write(photo_read.content)
-                            photo_write.close()
-                            appoint_json['data']['employee']['photo'] = SERVER_IMAGES + photo_name
-                    
-                    
-                    # Устанавливаем категории для записи
-                    if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала':
-                        appoint_json['data']['category_type'] = 'office'
-                    else:
-                        appoint_json['data']['category_type'] = 'trainer'
-                        
-                    # Категории для статуса    
-                    if appoint_json['data']['status'] == 'reserved' or appoint_json['data']['status'] == 'temporarily_reserved_need_payment':
-                        appoint_json['data']['status_type'] = 'reserved'
-                    else:
-                        appoint_json['data']['status_type'] = 'active'
-                        
-                        
-                    # Добавляем разделенные имя и фамилию
-                    employee_name = appoint_json['data']['employee']['name'].split()
-                    if employee_name[0]:
-                        appoint_json['data']['employee']['surname'] = employee_name[0]
-                        
-                    if employee_name[1]:
-                        appoint_json['data']['employee']['firstname'] = employee_name[1]
-                        
-                    # Преобразуем дату в дату с параметрами    
-                    appoint_json['data']['date_object'] = get_calendar_day(appoint_json['data']['start_date'])
-                    status_type = appoint_json['data']['status_type']
-                    client_object['workouts'][status_type].append(appoint_json['data'])
-                    client_object['workouts']['count']+= 1
-        
+                            appoint_json['data']['category_type'] = 'trainer'
+                            client_object['metrics']['training']['trainer']+= 1
+                            
+                        # Категории для статуса    
+                        if appoint_json['data']['status'] == 'reserved' or appoint_json['data']['status'] == 'temporarily_reserved_need_payment':
+                            appoint_json['data']['status_type'] = 'reserved'
+                        else:
+                            appoint_json['data']['status_type'] = 'active'
+                            
+                            
+                        # Добавляем разделенные имя и фамилию
+                        employee_name = appoint_json['data']['employee']['name'].split()
+                        if employee_name[0]:
+                            appoint_json['data']['employee']['surname'] = employee_name[0]
+                            
+                        if employee_name[1]:
+                            appoint_json['data']['employee']['firstname'] = employee_name[1]
+                            
+                        # Преобразуем дату в дату с параметрами    
+                        appoint_json['data']['date_object'] = get_calendar_day(appoint_json['data']['start_date'])
+                        status_type = appoint_json['data']['status_type']
+                        client_object['workouts'][status_type].append(appoint_json['data'])
+                        client_object['workouts']['count']+= 1
+
+
+            else:
+                # Считаем отмененные тренеровки
+                client_object['metrics']['training']['canceled']+= 1
+
+
+    client_object['workouts_history'] = list(reversed(client_object['workouts_history']))
     client_object['office_id'] = client_json['data']['club']['id']
     client_object['info'] = client_json['data']
     client_object['subscriptions'] = tickets_json['data']
@@ -735,6 +774,66 @@ def subscriptions_write(item: ModelSubscriptionWrite,
     return response_write.json()
 
 
+# ОПЛАТА БРОНИ
+
+class ModelSubscriptionWrite(BaseModel):
+    club_id: Optional[str] = Field(...)
+    appointment_id: Optional[str] = Field(...)
+    
+@app.post("/api/subscription/product/reserved", name="Оплата забронированной тренеровки")
+def subscriptions_write(item: ModelSubscriptionWrite,
+                        utoken: str = Header(...)):
+    
+    key = get_key_by_club(item.club_id)
+    # Данные клиента
+    response_client = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
+    response_client_json = response_client.json()
+    client_phone = re.sub(r'[^\d]', '', response_client_json['data']['phone'])
+    
+    # ВЫЯСНЯЕМ ID УСЛУГИ ТРЕНЕРА
+    response_appointments = session.get(API_LIST['appointments'], 
+                                   params={'club_id': item.club_id, 'appointment_id': item.appointment_id}, 
+                                   headers={'usertoken': utoken, 'apikey': key})
+    response_appointments_json = response_appointments.json()
+    
+    if response_appointments_json['result']:
+        if response_appointments_json['data']:
+            for item_appoint in response_appointments_json['data']:
+                if item_appoint['appointment_id'] == item.appointment_id:
+                    print(item_appoint)
+                    if item_appoint['status'] != 'canceled':
+                        if not item_appoint['payment']['ticket_id']:
+                            
+                            
+                            # Проверяем - не появились ли абонементы или оплеченные тренеровки
+                            
+                            
+                            training_category = {
+                                'АРЕНДА СТУДИИ ДЛЯ ТРЕНЕРА': 'office',
+                                'Персональная тренировка': 'trainer'
+                            }
+                            
+                            service_type = training_category[item_appoint['service']['title']]
+                            # Товары магазина
+                            product_list = get_shop_products(club_id = item.club_id, utoken = utoken)
+                            product_amount = product_list['data']['once'][service_type][0]['price']
+                            
+                            payment_item = {
+                                'phone': client_phone,
+                                'description': 'Оплата тренеровки',
+                                'category_type': service_type,
+                                'amount': product_amount, #Берем первый абоменемет в разовых
+                                'orderNumber': '#FR' + str(random.randint(111111, 999999))
+                            }
+                            
+                            # Регистрируем заказ и получаем ссылку на оплату
+                            payment_data = sber_register_do(payment_item)
+                            #payment_order_id = payment_data['order_id']
+                            return {'result': True, 'data': payment_data}
+                    
+    return {'result': False, 'error': 'Ошибка при оплате забронированной тренеровки'}
+
+
 
 class ModelSubscriptionReserved(BaseModel):
     club_id: Optional[str] = Field(...)
@@ -750,6 +849,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                         utoken: str = Header(...)):
     
     key = get_key_by_club(item.club_id)
+    # ID Услуги сотрудника
     service_id = None
     
     # Товары магазина
@@ -793,6 +893,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
     
     if response_trainer_json['result']:
         if response_trainer_json['data']:
+            # ID Услуги сотрудника
             service_id = response_trainer_json['data'][0]['id']
             
             # Объект для записи-бронирования
@@ -808,16 +909,62 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                                          headers={'usertoken': utoken, 'apikey': key})
             response_write_json = response_write.json()
             
+            # Регистрируем заказ и получаем ссылку на оплату
             if response_write_json['result']:
                 payment_data = sber_register_do(payment_item)
+                #payment_order_id = payment_data['order_id']
                 response_write_json['data']['payment'] = payment_data
 
     return response_write_json
 
 
+# Покупка абонемента
+class ModelSubscriptionPay(BaseModel):
+    club_id: Optional[str] = Field(...)
+    product_id: Optional[str] = Field(...)
 
 
-@app.get("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
+@app.post("/api/subscription/product/pay", name="Покупка абонемента")
+def subscriptions_product_pay(item: ModelSubscriptionPay,
+                        utoken: str = Header(...)):
+    key = get_key_by_club(item.club_id)
+    
+    # Данные клиента
+    response_client = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
+    response_client_json = response_client.json()
+    client_phone = re.sub(r'[^\d]', '', response_client_json['data']['phone'])
+    
+    # Товары магазина
+    response_shop = session.get(API_LIST['shop'], params={'club_id': item.club_id}, headers={'usertoken': utoken, 'apikey': key})    
+    response_shop_json = response_shop.json()
+    product_list = response_shop_json
+    
+    
+    print(product_list['data'])
+    for item_product in product_list['data']:
+        if item_product['id'] == item.product_id:
+            
+            payment_item = {
+                'phone': client_phone,
+                'description': item_product['title'],
+                'category_type': item_product['type'],
+                'amount': item_product['price'], #Берем первый абоменемет в разовых
+                'orderNumber': '#FR' + str(random.randint(111111, 999999))
+            }
+            
+            payment_data = sber_register_do(payment_item)
+            #payment_order_id = payment_data['order_id']
+            return {'result': True, 'data': payment_data}
+
+
+
+
+
+
+"""
+ФУНКЦИИ СБЕРА
+"""
+@app.post("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
 def sber_register_do(item):
     
     params = {
@@ -832,4 +979,21 @@ def sber_register_do(item):
     }
     
     response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
+    return response.json()
+
+
+class ModelOrderId(BaseModel):
+    orderId: Optional[str] = Field(...)
+
+@app.post("/api/payment/check", name="Проверка статус заказа")
+def sber_check_do(item: ModelOrderId):
+    
+    params = {
+        #userName: 'fitroom_1-api',
+        #password: 'fitroom_1',
+        'token': 'vrvhmv5jfbcgapegqmlqof2slt',
+        'orderId': item.orderId
+    }
+    
+    response = requests.get('https://3dsec.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
     return response.json()
