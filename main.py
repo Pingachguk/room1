@@ -17,7 +17,8 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "http://192.168.43.235:8080"
+    "http://192.168.43.235:8080",
+    "http://10.0.80.188:8080"
 ]
 
 app.add_middleware(
@@ -28,8 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SERVER_IMAGES = 'http://127.0.0.1:8000/images/'
-#SERVER_IMAGES = 'http://192.168.43.235:8000/images/'
+#SERVER_IMAGES = 'http://127.0.0.1:8000/images/'
+SERVER_IMAGES = 'http://192.168.43.235:8000/images/'
 API_KEY = '1a5a6f3b-4504-40b7-b286-14941fd2f635'
 APP_BASIC_LOGIN = 'ServiceUserAPI'
 APP_BASIC_PASSWORD = 'Gu3nevehexusihuquhycywesukuciv'
@@ -346,8 +347,6 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
                 if appoint_json['result']:
                     if not appoint_json['data']['canceled']:
                         
-                        client_object['metrics']['training']['canceled']+= 1
-                        
                         """
                         СОХРАНЯЕМ ФОТО С СЕРВЕРА НА СВОЙ
                         """
@@ -367,10 +366,14 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
                         # Устанавливаем категории для записи
                         if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала':
                             appoint_json['data']['category_type'] = 'office'
-                            client_object['metrics']['training']['office']+= 1
+                            
+                            if [item_app['status']] == 'ended':
+                                client_object['metrics']['training']['office']+= 1
                         else:
                             appoint_json['data']['category_type'] = 'trainer'
-                            client_object['metrics']['training']['trainer']+= 1
+                            
+                            if [item_app['status']] == 'ended':
+                                client_object['metrics']['training']['trainer']+= 1
                             
                         # Категории для статуса    
                         if appoint_json['data']['status'] == 'reserved' or appoint_json['data']['status'] == 'temporarily_reserved_need_payment':
