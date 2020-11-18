@@ -1,4 +1,4 @@
-import requests, re
+import requests, re, random
 import os.path
 import urllib.request
 from urllib.parse import urlparse
@@ -733,4 +733,103 @@ def subscriptions_write(item: ModelSubscriptionWrite,
                                          headers={'usertoken': utoken, 'apikey': key})
             
     return response_write.json()
+
+
+
+class ModelSubscriptionReserved(BaseModel):
+    club_id: Optional[str] = Field(...)
+    category: Optional[str] = Field(...)
+    type: Optional[str] = Field(...)
+    employee_id: Optional[str] = Field(...)
+    date: Optional[str] = Field(...)
+    time: Optional[str] = Field(...)
+
+# Бронированием тренеровки перед оплатой
+@app.post("/api/subscription/write/once", name="Бронирование тренеровки перед оплатой")
+def subscriptions_write(item: ModelSubscriptionReserved,
+                        utoken: str = Header(...)):
     
+    key = get_key_by_club(item.club_id)
+    service_id = None
+    
+    # Товары магазина
+    product_list = get_shop_products(club_id = item.club_id, utoken = utoken)
+    
+    # Данные клиента
+    response_client = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
+    response_client_json = response_client.json()
+    client_phone = re.sub(r'[^\d]', '', response_client_json['data']['phone'])
+    description = {
+        'trainer:first': 'Оплата пробной тренеровки с тренером',
+        'trainer:once': 'Оплата разовой тренеровки с тренером',
+        'trainer:package': 'Оплата пакета тренеровок с тренером',
+        'office:once': 'Оплата разовой аренды студии',
+        'office:package': 'Оплата пакета аренды студии'
+    }
+    
+    category_type = item.category
+    item_description = None
+    if description[item.category + ':' + item.type]:
+        item_description = description[item.category + ':' + item.type]
+        
+        if item_description == 'trainer:first':
+            category_type = 'first'
+    else:
+        item_description = 'Оплата услуги'
+    
+    payment_item = {
+        'phone': client_phone,
+        'description': item_description,
+        'category_type': category_type,
+        'amount': product_list['data'][item.type][item.category][0]['price'], #Берем первый абоменемет в разовых
+        'orderNumber': '#FR' + str(random.randint(111111, 999999))
+    }
+    
+    # ВЫЯСНЯЕМ ID УСЛУГИ ТРЕНЕРА
+    response_trainer = session.get(API_LIST['services'], 
+                                   params={'club_id': item.club_id, 'employee_id': item.employee_id}, 
+                                   headers={'usertoken': utoken, 'apikey': key})    
+    response_trainer_json = response_trainer.json()
+    
+    if response_trainer_json['result']:
+        if response_trainer_json['data']:
+            service_id = response_trainer_json['data'][0]['id']
+            
+            # Объект для записи-бронирования
+            write_object = {
+                'club_id': item.club_id,
+                'employee_id': item.employee_id,
+                'service_id': service_id,
+                'date_time': item.date + ' ' + item.time
+            }
+            # Бронируем время
+            response_write = session.post(API_LIST['appoint'],
+                                         json=write_object,
+                                         headers={'usertoken': utoken, 'apikey': key})
+            response_write_json = response_write.json()
+            
+            if response_write_json['result']:
+                payment_data = sber_register_do(payment_item)
+                response_write_json['data']['payment'] = payment_data
+
+    return response_write_json
+
+
+
+
+@app.get("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
+def sber_register_do(item):
+    
+    params = {
+        #userName: 'fitroom_1-api',
+        #password: 'fitroom_1',
+        'token': 'vrvhmv5jfbcgapegqmlqof2slt',
+        'amount': item['amount'] + '00',
+        'returnUrl': 'http://localhost:8080/success?type=' + item['category_type'],
+        'orderNumber': item['orderNumber'],
+        'description': item['description'],
+        'phone': item['phone']
+    }
+    
+    response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
+    return response.json()
