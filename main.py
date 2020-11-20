@@ -18,7 +18,10 @@ origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://192.168.43.235:8080",
-    "http://10.0.80.188:8080"
+    "http://10.0.80.188:8080",
+    "http://app.fitroom.ru:88",
+    "https://app.fitroom.ru:88",
+    "http://213.139.210.58:8000"
 ]
 
 app.add_middleware(
