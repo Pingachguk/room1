@@ -814,7 +814,9 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
                 # Получаем название первого индекса с названием категории
                 type_category = next(iter(category))
                 item['category_type'] = category[type_category]
-                subscriptions[type_category][category[type_category]].append(item)
+                
+                if type_category != 'first':
+                    subscriptions[type_category][category[type_category]].append(item)
             
     
     if response_clinet_json['result']:
@@ -827,6 +829,9 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
                 # на аренду то значит номенклатура существует для этого аккаунта
                 if category[type_category] == 'office':
                     is_verified = True
+                    
+                if type_category == 'first':
+                    subscriptions[type_category][category[type_category]].append(item)
                     
                     
     subscriptions['is_verified'] = is_verified
@@ -1023,8 +1028,9 @@ def subscriptions_write(item: ModelSubscriptionReserved,
     item_description = None
     if description[item.category + ':' + item.type]:
         item_description = description[item.category + ':' + item.type]
+        item_category = item.category + ':' + item.type
         
-        if item_description == 'trainer:first':
+        if item_category == 'trainer:first':
             category_type = 'first'
     else:
         item_description = 'Оплата услуги'
@@ -1191,7 +1197,10 @@ def sber_callback(item: ModelCallback):
         key = get_key_by_club(order_query.club_id)
         # Список товаров
         product_list = get_shop_products(club_id = order_query.club_id, utoken = order_query.utoken)
-        product_id = product_list['data']['once'][order_query.type][0]['id']
+        if order_query.type != 'first':
+            product_id = product_list['data']['once'][order_query.type][0]['id']
+        else:
+            product_id = product_list['data']['first']['trainer'][0]['id']
                             
         action_data = {
             "transaction_id": order_query.order_id,
