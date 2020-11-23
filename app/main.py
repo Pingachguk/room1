@@ -1,17 +1,22 @@
 import requests, re, random
 import os.path
 import urllib.request
+import uuid
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 
 from typing import Optional
-from fastapi import FastAPI, Query, Header, Cookie
+from fastapi import FastAPI, Query, Header, Cookie, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 
+from . import database
+from .database import order_app
+
 app = FastAPI()
+app.include_router(order_app.router)
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 origins = [
@@ -32,13 +37,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#SERVER_IMAGES = 'http://127.0.0.1:8000/images/'
-SERVER_IMAGES = 'http://192.168.43.235:8000/images/'
+SERVER_IMAGES = 'http://127.0.0.1:8000/images/'
+#SERVER_IMAGES = 'http://192.168.43.235:8000/images/'
 API_KEY = '1a5a6f3b-4504-40b7-b286-14941fd2f635'
 APP_BASIC_LOGIN = 'ServiceUserAPI'
 APP_BASIC_PASSWORD = 'Gu3nevehexusihuquhycywesukuciv'
 API_ADDR = 'https://cloud.1c.fitness/app/2970/hs/api/v3/'
-#USER_TOKEN = 'D5CC150F1EC19169F0984D4D0A210A95' #Храним в cookie и передаем в headers
 
 API_LIST = {
     'confirm_phone': API_ADDR + 'confirm_phone/',
@@ -58,13 +62,38 @@ API_LIST = {
     'times': API_ADDR + 'appointment_times/',
     'services': API_ADDR + 'appointment_services/',
     
-    'shop': API_ADDR + 'price_list/'
+    'shop': API_ADDR + 'price_list/',
+    
+    'payment': API_ADDR + 'payment/'
 }
 
 # Авторизуемся на сервере API
 session = requests.Session()
 session.auth = (APP_BASIC_LOGIN, APP_BASIC_PASSWORD)
 session.headers = {'apikey': API_KEY}
+
+@app.post("/api/images/upload")
+async def create_upload_file(image: UploadFile = File(...)):
+    content_type = {
+        'image/png': 'png',
+        'image/jpg': 'jpg',
+        'image/jpeg': 'jpeg'
+    }
+    
+    if image.content_type in content_type:
+        image_file = image.file.read()
+        
+        if len(image_file) < 3000000:
+            new_filename = str(uuid.uuid4()) + '.' + content_type[image.content_type]
+            photo_write = open('images/uploads/' + new_filename , 'wb')
+            photo_write.write(image_file)
+            photo_write.close()
+            
+            return {'result': True, 'filename': new_filename}
+        else:
+            return {'result': False, 'message': 'Загрузите изображение меньшего размера'}
+    else:
+        return {'result': False, 'message': 'Загрузите пожалуйста изображение'}
 
 @app.get("/api/clubs")
 def get_clubs():
@@ -224,7 +253,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
         'office_id': None,
         'is_verified': False,
         'info': {},
-        'subscriptions': {},
+        'subscriptions': [],
         'workouts': {
             'reserved': [],
             'active': [],
@@ -296,7 +325,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Пакет из 8 тренировок с тренером':'trainer:package',
             'Пакет из 12 тренировок с тренером':'trainer:package',
                         
-            'Разовая аренда студии': 'office:first',
+            'Разовая аренда студии': 'office:once',
             'Пакет на 5 посещений': 'office:package',
             'Пакет на 10 посещений': 'office:package',
             'Пакет на 20 посещений': 'office:package'
@@ -310,12 +339,14 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     if tickets_json['result']:
         client_object['subscription_flags'] = {'trainer': [], 'office': []}
         for item_ticket in tickets_json['data']:
-            # status not_active ? при 0 на абонементе / показывать при active если 0?
-            item_ticket['category_type'] = get_category(item_ticket['title'].strip())
-            item_ticket['category_subscription'] = get_flags(item_ticket['title'].strip()).split(':')[1]
-            getter_flags = get_flags(item_ticket['title'].strip()).split(':')
-            if getter_flags:
-                client_object['subscription_flags'][getter_flags[0]].append(getter_flags[1])
+            if item_ticket['count'] != 0:
+                # status not_active ? при 0 на абонементе / показывать при active если 0?
+                item_ticket['category_type'] = get_category(item_ticket['title'].strip())
+                item_ticket['category_subscription'] = get_flags(item_ticket['title'].strip()).split(':')[1]
+                getter_flags = get_flags(item_ticket['title'].strip()).split(':')
+                if getter_flags:
+                    client_object['subscription_flags'][getter_flags[0]].append(getter_flags[1])
+                    client_object['subscriptions'].append(item_ticket)
             
     
     appointments_response = session.get(API_LIST['appointments'], headers={'usertoken': utoken, 'apikey': key})
@@ -408,7 +439,6 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     client_object['workouts_history'] = list(reversed(client_object['workouts_history']))
     client_object['office_id'] = client_json['data']['club']['id']
     client_object['info'] = client_json['data']
-    client_object['subscriptions'] = tickets_json['data']
     
     # is_verified code
         
@@ -434,7 +464,6 @@ def update_client(item: ModelClientUpdate, utoken: str = Header(...)):
             item_clear[k] = v
             
     response = session.put(API_LIST['client'], json=item_clear, headers={'usertoken': utoken})
-    print(response.content)
     return response.json();
 
 
@@ -559,7 +588,6 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
                 trainers['data']['office_id'] = item['id']
                 name_split = item['name'].split()
                 item['name'] = name_split[0] + ' ' + name_split[1] 
-                print(item['name'])
                 #trainers['data']['club_object'] = item
         
         
@@ -806,7 +834,6 @@ def subscriptions_write(item: ModelSubscriptionWrite,
         if response_appointments_json['data']:
             for item_appoint in response_appointments_json['data']:
                 if item_appoint['appointment_id'] == item.appointment_id:
-                    print(item_appoint)
                     if item_appoint['status'] != 'canceled':
                         if not item_appoint['payment']['ticket_id']:
                             
@@ -834,6 +861,20 @@ def subscriptions_write(item: ModelSubscriptionWrite,
                             
                             # Регистрируем заказ и получаем ссылку на оплату
                             payment_data = sber_register_do(payment_item)
+                            
+                            if payment_data:
+                                db_data = {
+                                    'order_id': payment_data['orderId'],
+                                    'action': 'reserved',
+                                    'utoken': utoken,
+                                    'phone': client_phone,
+                                    'club_id': item.club_id,
+                                    'type': service_type,
+                                    'appointment_id': item.appointment_id,
+                                }
+                                
+                                db_object = database.schemas.OrderCreate(**db_data)
+                                order_create = order_app.create_order(db_object)
                             #payment_order_id = payment_data['order_id']
                             return {'result': True, 'data': payment_data}
                     
@@ -915,11 +956,26 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                                          headers={'usertoken': utoken, 'apikey': key})
             response_write_json = response_write.json()
             
-            # Регистрируем заказ и получаем ссылку на оплату
             if response_write_json['result']:
-                payment_data = sber_register_do(payment_item)
-                #payment_order_id = payment_data['order_id']
-                response_write_json['data']['payment'] = payment_data
+                # Регистрируем заказ и получаем ссылку на оплату
+                if response_write_json['result']:
+                    payment_data = sber_register_do(payment_item)
+                    
+                    if payment_data:
+                        db_data = {
+                            'order_id': payment_data['orderId'],
+                            'action': 'timetable',
+                            'utoken': utoken,
+                            'phone': client_phone,
+                            'club_id': item.club_id,
+                            'type': category_type,
+                            'appointment_id': response_write_json['data']['appointment']['id'],
+                        }
+                        
+                        db_object = database.schemas.OrderCreate(**db_data)
+                        order_create = order_app.create_order(db_object)
+                        
+                    response_write_json['data']['payment'] = payment_data
 
     return response_write_json
 
@@ -945,8 +1001,6 @@ def subscriptions_product_pay(item: ModelSubscriptionPay,
     response_shop_json = response_shop.json()
     product_list = response_shop_json
     
-    
-    print(product_list['data'])
     for item_product in product_list['data']:
         if item_product['id'] == item.product_id:
             
@@ -959,18 +1013,168 @@ def subscriptions_product_pay(item: ModelSubscriptionPay,
             }
             
             payment_data = sber_register_do(payment_item)
-            #payment_order_id = payment_data['order_id']
+
+            if payment_data:
+                db_data = {
+                    'order_id': payment_data['orderId'],
+                    'action': 'subscription',
+                    'utoken': utoken,
+                    'phone': client_phone,
+                    'club_id': item.club_id,
+                    'type': item_product['type'],
+                    'ticket_id': item.product_id
+                }
+                
+                db_object = database.schemas.OrderCreate(**db_data)
+                order_create = order_app.create_order(db_object)
+            
             return {'result': True, 'data': payment_data}
 
 
-
-
-
+@app.get("/api/order/check", name="Подтверждение заказа")
+def order_confirm(orderId: Optional[str] = Query(...), utoken: str = Header(...)):
+    sber_data = {
+        'mdOrder': orderId
+    }
+    
+    model_data = ModelCallback(**sber_data)
+    result = sber_callback(model_data)
+    return result
 
 """
 ФУНКЦИИ СБЕРА
 """
-@app.post("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
+# Callback
+class ModelCallback(BaseModel):
+    mdOrder: Optional[str] = Field(...)
+    orderNumber: Optional[str] = Field(None)
+    operation: Optional[str] = Field(None)
+    status: Optional[str] = Field(None)
+    
+@app.get("/api/payment/webhook_notify", name="Статусы сделок от сбера")
+def sber_callback(item: ModelCallback):
+    
+    ACTION_SUBSCRIPTION = 'subscription'
+    ACTION_RESERVED = 'reserved'
+    ACTION_TIMETABLE = 'timetable'
+    
+    def action_subscription (order_query, amount):
+        key = get_key_by_club(order_query.club_id)
+        action_data = {
+            "transaction_id": order_query.order_id,
+            "club_id": order_query.club_id,
+            "cart": [
+                {
+                "purchase_id": order_query.ticket_id,
+                "count": 1
+                }
+            ],
+            "payment_list": [
+                {
+                    "type": "card",
+                    "amount": amount 
+                }
+            ]
+        }
+        
+        response_payment = session.post(API_LIST['payment'], json=action_data, headers={'usertoken': order_query.utoken, 'apikey': key})
+        response_payment_json = response_payment.json()
+        return response_payment_json
+    
+    
+    def action_reserved (order_query, amount):
+        key = get_key_by_club(order_query.club_id)
+        # Список товаров
+        product_list = get_shop_products(club_id = order_query.club_id, utoken = order_query.utoken)
+        product_id = product_list['data']['once'][order_query.type][0]['id']
+                            
+        action_data = {
+            "transaction_id": order_query.order_id,
+            "club_id": order_query.club_id,
+            "cart": [
+                {
+                "purchase_id": product_id,
+                "count": 1
+                }
+            ],
+            "payment_list": [
+                {
+                    "type": "card",
+                    "amount": amount 
+                }
+            ]
+        }
+        
+        # Покупаем абонемент
+        response_payment = session.post(API_LIST['payment'], json=action_data, headers={'usertoken': order_query.utoken, 'apikey': key})
+        response_payment_json = response_payment.json()
+        
+        if response_payment_json['result']:
+            appoint_data = {
+                'club_id': order_query.club_id,
+                'appointment_id': order_query.appointment_id
+            }
+            
+            # Списываем абонемент
+            response_appoint = session.post(API_LIST['appoint'], json=appoint_data, headers={'usertoken': order_query.utoken, 'apikey': key})
+            appoint_data_json = response_payment.json()
+            
+            if appoint_data_json['result']:
+                return appoint_data_json
+        else:
+            return response_payment_json
+
+
+
+    order_id = item.mdOrder
+    order_query = database.order_app.read_order(order_id = order_id)
+
+
+    if order_query:
+        if not order_query.confirm:
+            order_check = sber_check_do(order_id = order_id)
+            if order_check['errorCode'] != 0:
+                if order_check['actionCode'] == 0:
+                    
+                    key = get_key_by_club(order_query.club_id)
+                    # Данные клиента
+                    response_client = session.get(API_LIST['client'], headers={'usertoken': order_query.utoken, 'apikey': key})
+                    response_client_json = response_client.json()
+                    client_phone = re.sub(r'[^\d]', '', response_client_json['data']['phone'])
+                    result_action = False
+                    # Покупаем абонемент
+                    if order_query.action == ACTION_SUBSCRIPTION:
+                        return_action = action_subscription(order_query, order_check['amount'])
+                        result_action = return_action['result']
+
+                    if order_query.action == ACTION_RESERVED:
+                        return_action = action_reserved(order_query, order_check['amount'])
+                        result_action = return_action['result']
+                        
+                    if order_query.action == ACTION_TIMETABLE:
+                        return_action = action_reserved(order_query, order_check['amount'])
+                        result_action = return_action['result']
+                    
+                    if result_action:
+                        db_data = {
+                            'order_id': order_id,
+                            'confirm': True
+                        }
+                        
+                        db_object = database.schemas.OrderConfirm(**db_data)
+                        order_confirm = database.order_app.confirm_order(db_object)
+                        
+                        return {'result': True, 'confirm': True}
+                else:
+                    return {'result': False, 'status': 'error', 'code': order_check['actionCode']}
+            return order_check
+        else:
+            return {'result': False, 'status': 'error', 'message': 'Заказ уже подтвержден'}
+    else:
+        return {'result': False, 'status': 'error', 'message': 'Заказ с таким номером не найден'}
+    
+
+#@app.post("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
 def sber_register_do(item):
     
     params = {
@@ -978,7 +1182,7 @@ def sber_register_do(item):
         #password: 'fitroom_1',
         'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'amount': item['amount'] + '00',
-        'returnUrl': 'http://localhost:8080/success?type=' + item['category_type'],
+        'returnUrl': 'http://127.0.0.1:8080/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
         'description': item['description'],
         'phone': item['phone']
@@ -987,18 +1191,14 @@ def sber_register_do(item):
     response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
     return response.json()
 
-
-class ModelOrderId(BaseModel):
-    orderId: Optional[str] = Field(...)
-
-@app.post("/api/payment/check", name="Проверка статус заказа")
-def sber_check_do(item: ModelOrderId):
+#@app.post("/api/payment/check", name="Проверка статус заказа")
+def sber_check_do(order_id: str):
     
     params = {
         #userName: 'fitroom_1-api',
         #password: 'fitroom_1',
         'token': 'vrvhmv5jfbcgapegqmlqof2slt',
-        'orderId': item.orderId
+        'orderId': order_id
     }
     
     response = requests.get('https://3dsec.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
