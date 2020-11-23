@@ -1287,7 +1287,7 @@ def sber_register_do(item):
         #password: 'fitroom_1',
         'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'amount': item['amount'] + '00',
-        'returnUrl': 'http://127.0.0.1:8080/success?type=' + item['category_type'],
+        'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
         'description': item['description'],
         'phone': item['phone']
