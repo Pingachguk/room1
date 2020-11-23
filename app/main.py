@@ -5,7 +5,13 @@ import uuid
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 
-from typing import Optional
+import smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from typing import Optional, List
 from fastapi import FastAPI, Query, Header, Cookie, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -73,18 +79,18 @@ session.auth = (APP_BASIC_LOGIN, APP_BASIC_PASSWORD)
 session.headers = {'apikey': API_KEY}
 
 @app.post("/api/images/upload")
-async def create_upload_file(image: UploadFile = File(...)):
+async def create_upload_file(file: UploadFile = File(...)):
     content_type = {
         'image/png': 'png',
         'image/jpg': 'jpg',
         'image/jpeg': 'jpeg'
     }
     
-    if image.content_type in content_type:
-        image_file = image.file.read()
+    if file.content_type in content_type:
+        image_file = file.file.read()
         
         if len(image_file) < 3000000:
-            new_filename = str(uuid.uuid4()) + '.' + content_type[image.content_type]
+            new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
             photo_write = open('images/uploads/' + new_filename , 'wb')
             photo_write.write(image_file)
             photo_write.close()
@@ -165,6 +171,62 @@ def get_key_by_club(club_id):
     for item in api_keys_clubs:
         if item['club_id'] == club_id:
             return item['key']
+        
+class ModelVerifiedSend(BaseModel):
+    name: str = Field(..., min_length=2)
+    last_name: str = Field(..., min_length=2)
+    phone: str = Field(..., min_length=11)
+    images: List[str] = Field(..., min_length=10)
+    
+@app.post("/api/verified/send", name='Заявка на верефикацию паспорта')
+async def verified_send(item: ModelVerifiedSend):
+    images = item.images
+   
+    subject = "Заявка на верификацию FITROOM.RU"
+    body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name
+    sender_email = "d1d3vs@gmail.com"
+    receiver_email = "d1d3vs@gmail.com"
+    password = 'Gmail2358132134'
+
+    # Create a multipart message and set headers
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+
+    # Add body to email
+    message.attach(MIMEText(body, "plain"))
+
+    for image in item.images:
+        filename = "images/uploads/" + image  # In same directory as script
+        # Open PDF file in binary mode
+        with open(filename, "rb") as attachment:
+            # Add file as application/octet-stream
+            # Email client can usually download this automatically as attachment
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+
+            # Encode file in ASCII characters to send by email
+            encoders.encode_base64(part)
+
+            # Add header as key/value pair to attachment part
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename= {filename}",
+            )
+
+            # Add attachment to message and convert message to string
+            message.attach(part)
+            
+    text = message.as_string()
+    # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+    
+    return {'result': True}
+
 
 class ModelConfirmPhone(BaseModel):
     phone: str = Field(..., min_length=11)
@@ -280,6 +342,9 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
     
     client_response = session.get(API_LIST['client'], headers={'usertoken': utoken, 'apikey': key})
     client_json = client_response.json()
+    
+    if not client_json['result']:
+        return client_json
     
     tickets_response = session.get(API_LIST['tickets'], headers={'usertoken': utoken, 'apikey': key})
     tickets_json = tickets_response.json()
@@ -836,17 +901,54 @@ def subscriptions_write(item: ModelSubscriptionWrite,
                 if item_appoint['appointment_id'] == item.appointment_id:
                     if item_appoint['status'] != 'canceled':
                         if not item_appoint['payment']['ticket_id']:
-                            
-                            
-                            # Проверяем - не появились ли абонементы или оплеченные тренеровки
-                            
-                            
                             training_category = {
                                 'АРЕНДА СТУДИИ ДЛЯ ТРЕНЕРА': 'office',
                                 'Персональная тренировка': 'trainer'
                             }
-                            
                             service_type = training_category[item_appoint['service']['title']]
+                            
+                            # Проверяем - не появились ли абонементы или оплеченные тренеровки
+                            tickets_response = session.get(API_LIST['tickets'], headers={'usertoken': utoken, 'apikey': key})
+                            tickets_json = tickets_response.json()
+                                
+                            def get_category(title):
+                                categories = {
+                                    'Пробная тренировка с тренером':'trainer',
+                                    'Разовая тренировка с тренером':'trainer',
+                                    'Пакет из 4 тренировок с тренером':'trainer',
+                                    'Пакет из 8 тренировок с тренером':'trainer',
+                                    'Пакет из 12 тренировок с тренером':'trainer',
+                                    
+                                    'Разовая аренда студии': 'office',
+                                    'Пакет на 5 посещений': 'office',
+                                    'Пакет на 10 посещений': 'office',
+                                    'Пакет на 20 посещений': 'office'
+                                }
+                                
+                                for item in categories:
+                                    if item == title:
+                                        return categories[item]
+                                    
+                            for ticket_item in tickets_json['data']:
+                                ticket_category = get_category(ticket_item['title'].strip())
+                                
+                                if ticket_item['count'] > 0:
+                                    if ticket_category == training_category[item_appoint['service']['title']]:
+                                        appoint_send_data = {
+                                            'club_id': item.club_id,
+                                            'appointment_id': item.appointment_id
+                                        }
+                                        
+                                        # Списываем абонемент
+                                        response_appoint = session.post(API_LIST['appoint'], json=appoint_send_data, headers={'usertoken': utoken, 'apikey': key})
+                                        appoint_data_json = response_appoint.json()
+                                        
+                                        if appoint_data_json['result']:
+                                            return {'result': True, 'data': {}}
+
+
+                            
+                            
                             # Товары магазина
                             product_list = get_shop_products(club_id = item.club_id, utoken = utoken)
                             product_amount = product_list['data']['once'][service_type][0]['price']
@@ -1117,7 +1219,7 @@ def sber_callback(item: ModelCallback):
             
             # Списываем абонемент
             response_appoint = session.post(API_LIST['appoint'], json=appoint_data, headers={'usertoken': order_query.utoken, 'apikey': key})
-            appoint_data_json = response_payment.json()
+            appoint_data_json = response_appoint.json()
             
             if appoint_data_json['result']:
                 return appoint_data_json
