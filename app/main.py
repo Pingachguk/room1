@@ -466,7 +466,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
                         
                         
                         # Устанавливаем категории для записи
-                        if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала':
+                        if str(appoint_json['data']['employee']['name']).strip() == 'Аренда зала' or str(appoint_json['data']['employee']['name']).strip() == 'Аренда студии':
                             appoint_json['data']['category_type'] = 'office'
                             
                             if [item_app['status']] == 'ended':
