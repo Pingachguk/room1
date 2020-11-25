@@ -41,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-production = False
+production = True
 
 if production:
     SERVER_IMAGES = 'https://app.fitroom.ru:8000/images/'
@@ -187,9 +187,9 @@ async def verified_send(item: ModelVerifiedSend):
    
     subject = "Заявка на верификацию FITROOM.RU"
     body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name
-    sender_email = "d1d3vs@gmail.com"
-    receiver_email = "d1d3vs@gmail.com"
-    password = 'Gmail2358132134'
+    sender_email = "app@fitroom.ru"
+    receiver_email = "arenda@fitroom.ru"
+    password = 'Fit8002012167'
 
     # Create a multipart message and set headers
     message = MIMEMultipart()
@@ -1294,7 +1294,8 @@ def sber_register_do(item):
     params = {
         #userName: 'fitroom_1-api',
         #password: 'fitroom_1',
-        'token': 'vrvhmv5jfbcgapegqmlqof2slt',
+        # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
+        'token': 'h056egj5sbh13rqpcpn1lo610m',
         'amount': item['amount'] + '00',
         'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
@@ -1311,6 +1312,8 @@ def sber_check_do(order_id: str):
     params = {
         #userName: 'fitroom_1-api',
         #password: 'fitroom_1',
+        #vrvhmv5jfbcgapegqmlqof2slt
+        # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
         'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'orderId': order_id
     }
