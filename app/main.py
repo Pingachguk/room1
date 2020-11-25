@@ -1283,7 +1283,7 @@ def sber_callback(item: ModelCallback):
                     return {'result': False, 'status': 'error', 'code': order_check['actionCode']}
             return order_check
         else:
-            return {'result': False, 'status': 'error', 'message': 'Заказ уже подтвержден'}
+            return {'result': true, 'confirm': True, 'message': 'Заказ уже подтвержден'}
     else:
         return {'result': False, 'status': 'error', 'message': 'Заказ с таким номером не найден'}
     
