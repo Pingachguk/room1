@@ -1317,7 +1317,7 @@ def sber_check_do(order_id: str):
         #password: 'fitroom_1',
         #vrvhmv5jfbcgapegqmlqof2slt
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        'token': 'vrvhmv5jfbcgapegqmlqof2slt',
+        'token': 'h056egj5sbh13rqpcpn1lo610m',
         'orderId': order_id
     }
     
