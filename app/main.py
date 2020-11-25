@@ -31,6 +31,8 @@ origins = [
     "http://192.168.43.235:8080",
     "https://app.fitroom.ru",
     "https://app.fitroom.ru:88",
+    "http://localhost",
+    "https://localhost"
 ]
 
 app.add_middleware(
@@ -1071,6 +1073,8 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                 # Регистрируем заказ и получаем ссылку на оплату
                 if response_write_json['result']:
                     payment_data = sber_register_do(payment_item)
+
+                    print(payment_data)
                     
                     if payment_data:
                         db_data = {
@@ -1295,10 +1299,10 @@ def sber_callback(item: ModelCallback):
 def sber_register_do(item):
     
     params = {
-        #userName: 'fitroom_1-api',
-        #password: 'fitroom_1',
+        'userName': 'fitroom',
+        'password': 'Mobifitness*1',
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        'token': 'h056egj5sbh13rqpcpn1lo610m',
+        #'token': 'h056egj5sbh13rqpcpn1lo610m',
         'amount': item['amount'] + '00',
         'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
@@ -1313,11 +1317,11 @@ def sber_register_do(item):
 def sber_check_do(order_id: str):
     
     params = {
-        #userName: 'fitroom_1-api',
-        #password: 'fitroom_1',
+        'userName': 'fitroom',
+        'password': 'Mobifitness*1',
         #vrvhmv5jfbcgapegqmlqof2slt
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        'token': 'h056egj5sbh13rqpcpn1lo610m',
+        #'token': 'h056egj5sbh13rqpcpn1lo610m',
         'orderId': order_id
     }
     
