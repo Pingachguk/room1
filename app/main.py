@@ -1312,7 +1312,11 @@ def sber_register_do(item):
         'phone': item['phone']
     }
     
-    response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
+    if not production:
+        response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
+    else:
+        response = requests.get('https://securepayments.sberbank.ru/payment/rest/register.do', params=params)
+        
     return response.json()
 
 #@app.post("/api/payment/check", name="Проверка статус заказа")
@@ -1327,5 +1331,9 @@ def sber_check_do(order_id: str):
         'orderId': order_id
     }
     
-    response = requests.get('https://3dsec.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
+    if not production:
+        response = requests.get('https://3dsec.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
+    else:
+        response = requests.get('https://securepayments.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
+        
     return response.json()
