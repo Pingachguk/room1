@@ -1304,7 +1304,7 @@ def sber_register_do(item):
         #'userName': 'fitroom',
         #'password': 'Mobifitness*1',
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        'token': 'gt5e5pfobsapaj0hce9uvqf0k4',
+        'token': 'h056egj5sbh13rqpcpn1lo610m',
         'amount': item['amount'] + '00',
         'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
@@ -1323,7 +1323,7 @@ def sber_check_do(order_id: str):
         #'password': 'Mobifitness*1',
         #vrvhmv5jfbcgapegqmlqof2slt
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        'token': 'gt5e5pfobsapaj0hce9uvqf0k4',
+        'token': 'h056egj5sbh13rqpcpn1lo610m',
         'orderId': order_id
     }
     
