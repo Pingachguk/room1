@@ -1,3 +1,4 @@
 Pipfile
 images/*
 node_modules/*
+fitroom.db
