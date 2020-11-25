@@ -32,7 +32,9 @@ origins = [
     "https://app.fitroom.ru",
     "https://app.fitroom.ru:88",
     "http://localhost",
-    "https://localhost"
+    "https://localhost/"
+    "localhost",
+    "127.0.0.1"
 ]
 
 app.add_middleware(
