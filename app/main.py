@@ -1170,11 +1170,6 @@ class ModelCallback(BaseModel):
     
 @app.get("/api/payment/webhook_notify", name="Статусы сделок от сбера")
 def sber_callback(item: ModelCallback):
-    
-    if item.operation:
-        tgmessage = f"Order: {item.mdOrder}\r\nClient: {item.operation}"
-        requests.get('https://api.telegram.org/bot1396761730:AAEKlZDa-4EMjDuIW-SD-Pblf77iJW07cME/sendMessage?chat_id=-1001302056869&text=' + tgmessage)
-
 
     ACTION_SUBSCRIPTION = 'subscription'
     ACTION_RESERVED = 'reserved'
@@ -1288,6 +1283,13 @@ def sber_callback(item: ModelCallback):
                         
                         db_object = database.schemas.OrderConfirm(**db_data)
                         order_confirm = database.order_app.confirm_order(db_object)
+
+                        operation = False
+                        if item.operation:
+                            operation = item.operation
+                            
+                        tgmessage = f"Order: {order_id}\r\nClient: {client_phone}\r\nOperation: {operation}"
+                        requests.get('https://api.telegram.org/bot1396761730:AAEKlZDa-4EMjDuIW-SD-Pblf77iJW07cME/sendMessage?chat_id=-1001302056869&text=' + tgmessage)
 
                         return {'result': True, 'confirm': True}
                 else:
