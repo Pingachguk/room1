@@ -391,7 +391,7 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             
     def get_flags(title):
         categories = {
-            'Пробная тренировка с тренером':'trainer:first',
+            'Пробная тренировка с тренером':'trainer:once',
             'Разовая тренировка с тренером':'trainer:once',
             'Пакет из 4 тренировок с тренером':'trainer:package',
             'Пакет из 8 тренировок с тренером':'trainer:package',
@@ -1308,7 +1308,7 @@ def sber_register_do(item):
         'userName': 'fitroom-api',
         'password': 'Mobifitness*1',
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        #'token': 'h056egj5sbh13rqpcpn1lo610m',
+        #'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'amount': item['amount'] + '00',
         'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
@@ -1331,7 +1331,7 @@ def sber_check_do(order_id: str):
         'password': 'Mobifitness*1',
         #vrvhmv5jfbcgapegqmlqof2slt
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        #'token': 'h056egj5sbh13rqpcpn1lo610m',
+        #'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'orderId': order_id
     }
     
