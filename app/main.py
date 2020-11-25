@@ -191,9 +191,9 @@ async def verified_send(item: ModelVerifiedSend):
    
     subject = "Заявка на верификацию FITROOM.RU"
     body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name
-    sender_email = "app@fitroom.ru"
+    sender_email = "fitroom.server@yandex.ru"
     receiver_email = "arenda@fitroom.ru"
-    password = 'Fit8002012167'
+    password = 'Fitroom123456'
 
     # Create a multipart message and set headers
     message = MIMEMultipart()
@@ -228,7 +228,7 @@ async def verified_send(item: ModelVerifiedSend):
     text = message.as_string()
     # Log in to server using secure context and send email
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+    with smtplib.SMTP_SSL("smtp.yandex.com", 465, context=context) as server:
         server.login(sender_email, password)
         server.sendmail(sender_email, receiver_email, text)
     
