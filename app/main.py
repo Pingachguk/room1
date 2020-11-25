@@ -1301,10 +1301,10 @@ def sber_callback(item: ModelCallback):
 def sber_register_do(item):
     
     params = {
-        'userName': 'fitroom',
-        'password': 'Mobifitness*1',
+        #'userName': 'fitroom',
+        #'password': 'Mobifitness*1',
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        #'token': 'h056egj5sbh13rqpcpn1lo610m',
+        'token': 'gt5e5pfobsapaj0hce9uvqf0k4',
         'amount': item['amount'] + '00',
         'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
         'orderNumber': item['orderNumber'],
@@ -1319,11 +1319,11 @@ def sber_register_do(item):
 def sber_check_do(order_id: str):
     
     params = {
-        'userName': 'fitroom',
-        'password': 'Mobifitness*1',
+        #'userName': 'fitroom',
+        #'password': 'Mobifitness*1',
         #vrvhmv5jfbcgapegqmlqof2slt
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
-        #'token': 'h056egj5sbh13rqpcpn1lo610m',
+        'token': 'gt5e5pfobsapaj0hce9uvqf0k4',
         'orderId': order_id
     }
     
