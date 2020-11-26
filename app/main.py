@@ -61,6 +61,7 @@ API_LIST = {
     'confirm_phone': API_ADDR + 'confirm_phone/',
     'auth_client': API_ADDR + 'auth_client/',
     'reg_and_auth_client': API_ADDR + 'reg_and_auth_client/',
+    'password_reset': API_ADDR + 'password/',
     
     'client': API_ADDR + 'client/',
     'tickets': API_ADDR + 'tickets/',
@@ -286,6 +287,20 @@ def registration(item: ModelRegAndAuthClient):
             
     response = session.post(API_LIST['reg_and_auth_client'], json=item_clear)
     return response.json();
+
+
+
+class ModelAuthReset(BaseModel):
+    phone: str = Field(..., min_length=11, title='Номер телефона')
+    password: Optional[str] = Field(None, title='Пароль')
+    pass_token: Optional[str] = Field(None, title='Временный токен')
+
+@app.post("/api/auth/reset", name="Сброс пароля")
+def registration(item: ModelAuthReset):
+    response = session.post(API_LIST['password_reset'], json=item.dict())
+    return response.json();
+
+
 
 class ModelAuth(BaseModel):
     phone: str = Field(..., min_length=11, title='Номер телефона')
