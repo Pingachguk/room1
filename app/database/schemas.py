@@ -12,6 +12,7 @@ class Order(BaseModel):
 	type: Optional[str] = None
 	ticket_id: Optional[str] = None
 	appointment_id: Optional[str] = None
+	promocode: Optional[str] = None
 	created_at: Optional[datetime] = None
 	updated_at: Optional[datetime] = None
 
@@ -27,6 +28,7 @@ class OrderCreate(BaseModel):
 	type: Optional[str] = None
 	ticket_id: Optional[str] = None
 	appointment_id: Optional[str] = None
+	promocode: Optional[str] = None
 
 	class Config:
 		orm_mode = True

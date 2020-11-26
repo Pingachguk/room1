@@ -1,7 +1,7 @@
 import requests, re, random
 import os.path
 import urllib.request
-import uuid
+import uuid, json
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 
@@ -77,6 +77,7 @@ API_LIST = {
     'services': API_ADDR + 'appointment_services/',
     
     'shop': API_ADDR + 'price_list/',
+    'cart_cost': API_ADDR + 'cart_cost/',
     
     'payment': API_ADDR + 'payment/'
 }
@@ -758,6 +759,25 @@ def get_trainers_all(club_id: Optional[str] = Query(...), date: Optional[str] = 
         
     return trainers
 
+# ПОЛУЧитЬ СТОИМОСТЬ КОРЗНИНЫ + ПРОМОКОД
+@app.get("/api/promocode/check", name="Стоимость корзины + промокод")
+def get_promocode_check(club_id: Optional[str] = Query(...),
+                        product_id: Optional[str] = Query(...),
+                        promocode: Optional[str] = Query(None),
+                        utoken: str = Header(...)):
+    key = get_key_by_club(club_id)
+    cart_obj = json.dumps({"cart_array":[{"purchase_id": product_id,"count":1}]})
+    params = {
+        'club_id': club_id, 
+        'promocode': promocode
+    }
+  
+    response_cart = session.get(API_LIST['cart_cost'] + '?cart=' + cart_obj, 
+                                 params=params, 
+                                 headers={'usertoken': utoken, 'apikey': key})
+    
+    response_cart_json = response_cart.json()
+    return response_cart_json
 
 # АБОНЕМЕНТЫ МАГАЗИН
 
@@ -1018,6 +1038,7 @@ class ModelSubscriptionReserved(BaseModel):
     employee_id: Optional[str] = Field(...)
     date: Optional[str] = Field(...)
     time: Optional[str] = Field(...)
+    promocode: Optional[str] = Field(None)
 
 # Бронированием тренеровки перед оплатой
 @app.post("/api/subscription/write/once", name="Бронирование тренеровки перед оплатой")
@@ -1053,12 +1074,24 @@ def subscriptions_write(item: ModelSubscriptionReserved,
             category_type = 'first'
     else:
         item_description = 'Оплата услуги'
+        
+    product_price = product_list['data'][item.type][item.category][0]['price']
+    if item.promocode:
+        promocode_response = get_promocode_check(
+            club_id = item.club_id,
+            product_id = product_list['data'][item.type][item.category][0]['id'],
+            promocode = item.promocode,
+            utoken = utoken
+        )
+
+        if promocode_response['result']:
+            product_price = promocode_response['data']['total_amount']
     
     payment_item = {
         'phone': client_phone,
         'description': item_description,
         'category_type': category_type,
-        'amount': product_list['data'][item.type][item.category][0]['price'], #Берем первый абоменемет в разовых
+        'amount': str(product_price), #Берем первый абоменемет в разовых
         'orderNumber': '#FR' + str(random.randint(111111, 999999))
     }
     
@@ -1090,8 +1123,6 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                 # Регистрируем заказ и получаем ссылку на оплату
                 if response_write_json['result']:
                     payment_data = sber_register_do(payment_item)
-
-                    print(payment_data)
                     
                     if payment_data:
                         db_data = {
@@ -1102,6 +1133,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                             'club_id': item.club_id,
                             'type': category_type,
                             'appointment_id': response_write_json['data']['appointment']['id'],
+                            'promocode': item.promocode
                         }
                         
                         db_object = database.schemas.OrderCreate(**db_data)
@@ -1116,6 +1148,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
 class ModelSubscriptionPay(BaseModel):
     club_id: Optional[str] = Field(...)
     product_id: Optional[str] = Field(...)
+    promocode: Optional[str] = Field(None)
 
 
 @app.post("/api/subscription/product/pay", name="Покупка абонемента")
@@ -1135,12 +1168,24 @@ def subscriptions_product_pay(item: ModelSubscriptionPay,
     
     for item_product in product_list['data']:
         if item_product['id'] == item.product_id:
+            product_price = item_product['price']
             
+            if item.promocode:
+                promocode_response = get_promocode_check(
+                    club_id = item.club_id,
+                    product_id = item.product_id,
+                    promocode = item.promocode,
+                    utoken = utoken
+                )
+
+                if promocode_response['result']:
+                    product_price = promocode_response['data']['total_amount']
+                
             payment_item = {
                 'phone': client_phone,
                 'description': item_product['title'],
                 'category_type': item_product['type'],
-                'amount': item_product['price'], #Берем первый абоменемет в разовых
+                'amount': str(product_price), #Берем первый абоменемет в разовых
                 'orderNumber': '#FR' + str(random.randint(111111, 999999))
             }
             
@@ -1154,7 +1199,8 @@ def subscriptions_product_pay(item: ModelSubscriptionPay,
                     'phone': client_phone,
                     'club_id': item.club_id,
                     'type': item_product['type'],
-                    'ticket_id': item.product_id
+                    'ticket_id': item.product_id,
+                    'promocode': item.promocode
                 }
                 
                 db_object = database.schemas.OrderCreate(**db_data)
@@ -1303,9 +1349,11 @@ def sber_callback(item: ModelCallback):
                         if item.operation:
                             operation = item.operation
                             
-                        tgmessage = f"Order: {order_id}\r\nClient: {client_phone}\r\nOperation: {operation}"
+                        tgmessage = f"Клиент: {client_phone}\r\nПродукт: {order_check['orderDescription']}\r\nСтоимость: {order_check['amount']}"
                         requests.get('https://api.telegram.org/bot1396761730:AAEKlZDa-4EMjDuIW-SD-Pblf77iJW07cME/sendMessage?chat_id=-1001302056869&text=' + tgmessage)
+                        requests.get('https://api.telegram.org/bot1460112425:AAGyyghF6n1htyEYAb6P36Vd71kwcSUqhjc/sendMessage?chat_id=-1001438006769&text=' + tgmessage) #FR CHANNEL
 
+                        #-1001438006769
                         return {'result': True, 'confirm': True}
                 else:
                     return {'result': False, 'status': 'error', 'code': order_check['actionCode']}
@@ -1331,10 +1379,7 @@ def sber_register_do(item):
         'phone': item['phone']
     }
     
-    if not production:
-        response = requests.get('https://3dsec.sberbank.ru/payment/rest/register.do', params=params)
-    else:
-        response = requests.get('https://securepayments.sberbank.ru/payment/rest/register.do', params=params)
+    response = requests.get('https://securepayments.sberbank.ru/payment/rest/register.do', params=params)
         
     return response.json()
 
@@ -1350,9 +1395,6 @@ def sber_check_do(order_id: str):
         'orderId': order_id
     }
     
-    if not production:
-        response = requests.get('https://3dsec.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
-    else:
-        response = requests.get('https://securepayments.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
+    response = requests.get('https://securepayments.sberbank.ru/payment/rest/getOrderStatusExtended.do', params=params)
         
     return response.json()
