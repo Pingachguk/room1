@@ -185,6 +185,9 @@ class ModelVerifiedSend(BaseModel):
     name: str = Field(..., min_length=2)
     last_name: str = Field(..., min_length=2)
     phone: str = Field(..., min_length=11)
+    passport_number: str = Field(...)
+    passport_date: str = Field(...)
+    passport_place: str = Field(...)
     images: List[str] = Field(..., min_length=10)
     
 @app.post("/api/verified/send", name='Заявка на верефикацию паспорта')
@@ -192,7 +195,7 @@ async def verified_send(item: ModelVerifiedSend):
     images = item.images
    
     subject = "Заявка на верификацию FITROOM.RU"
-    body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name
+    body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name + "\r\nНомер / Серия: " + item.passport_number + "\r\nДата выдачи: " + item.passport_date + "\r\nКем выдан: " +  item.passport_place
     sender_email = "fitroom.server@yandex.ru"
     receiver_email = "arenda@fitroom.ru"
     password = 'Fitroom123456'
