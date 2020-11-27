@@ -1255,7 +1255,8 @@ def sber_callback(item: ModelCallback):
                     "type": "card",
                     "amount": amount 
                 }
-            ]
+            ],
+            "promocode": order_query.promocode
         }
         
         response_payment = session.post(API_LIST['payment'], json=action_data, headers={'usertoken': order_query.utoken, 'apikey': key})
@@ -1286,7 +1287,8 @@ def sber_callback(item: ModelCallback):
                     "type": "card",
                     "amount": amount 
                 }
-            ]
+            ],
+            "promocode": order_query.promocode
         }
         
         # Покупаем абонемент
