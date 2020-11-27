@@ -1352,7 +1352,7 @@ def sber_callback(item: ModelCallback):
                         if item.operation:
                             operation = item.operation
                             
-                        tgmessage = f"Клиент: {client_phone}\r\nПродукт: {order_check['orderDescription']}\r\nСтоимость: {order_check['amount']}"
+                        tgmessage = f"Клиент: {client_phone}\r\nПродукт: {order_check['orderDescription']}\r\nСтоимость: {str(int(order_check['amount']) / 100)}"
                         requests.get('https://api.telegram.org/bot1396761730:AAEKlZDa-4EMjDuIW-SD-Pblf77iJW07cME/sendMessage?chat_id=-1001302056869&text=' + tgmessage)
                         requests.get('https://api.telegram.org/bot1460112425:AAGyyghF6n1htyEYAb6P36Vd71kwcSUqhjc/sendMessage?chat_id=-1001438006769&text=' + tgmessage) #FR CHANNEL
 
