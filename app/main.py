@@ -98,7 +98,7 @@ async def create_upload_file(file: UploadFile = File(...)):
     if file.content_type in content_type:
         image_file = file.file.read()
         
-        if len(image_file) < 3000000:
+        if len(image_file) < 4000000:
             new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
             photo_write = open('images/uploads/' + new_filename , 'wb')
             photo_write.write(image_file)
