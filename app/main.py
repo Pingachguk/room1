@@ -1371,6 +1371,11 @@ def sber_callback(item: ModelCallback):
 
 #@app.post("/api/payment/register", name="Регистрация заказа для получения ссылки на оплату")
 def sber_register_do(item):
+
+    item_type = item['category_type']
+
+    if item_type == 'trainer' or item_type == 'office':
+        item_type = 'once'
     
     params = {
         'userName': 'fitroom-api',
@@ -1378,7 +1383,7 @@ def sber_register_do(item):
         # ВКЛЮЧЕН БОЕВОЙ ТОКЕН!!!!!!!!
         #'token': 'vrvhmv5jfbcgapegqmlqof2slt',
         'amount': item['amount'] + '00',
-        'returnUrl': 'https://app.fitroom.ru/success?type=' + item['category_type'],
+        'returnUrl': 'https://app.fitroom.ru/success?type=' + item_type + '&subtype=' + item['category_type'],
         'orderNumber': item['orderNumber'],
         'description': item['description'],
         'phone': item['phone']
