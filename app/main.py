@@ -89,10 +89,8 @@ async def create_upload_file(file: UploadFile = File(...)):
         
         new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
         with open('images/uploads/' + new_filename, 'wb') as f:
-            [f.write(chunk) for chunk in iter(lambda: file.file.read(350000), b'')]
-        #photo_write = open('images/uploads/' + new_filename , 'wb')
-        #photo_write.write(image_file)
-        #photo_write.close()
+            f.write(file.file.read())
+            f.close()
         
         return {'result': True, 'filename': new_filename}
     else:
