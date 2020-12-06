@@ -25,18 +25,7 @@ app = FastAPI()
 app.include_router(order_app.router)
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
-origins = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://192.168.43.235:8080",
-    "https://app.fitroom.ru",
-    "http://app.fitroom.ru",
-    "app.fitroom.ru",
-    "http://localhost",
-    "https://localhost",
-    "localhost",
-    "127.0.0.1"
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
