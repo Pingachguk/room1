@@ -87,6 +87,7 @@ async def create_upload_file(file: UploadFile = File(...)):
     content_type = {
         'image/png': 'png',
         'image/jpeg': 'jpg',
+        'image/jpg': 'jpg'
     }
     
     if file.content_type in content_type:
