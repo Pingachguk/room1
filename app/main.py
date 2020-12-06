@@ -88,9 +88,11 @@ def create_upload_file(file: UploadFile = File(...)):
         image_file = file.file.read()
         
         new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
-        photo_write = open('images/uploads/' + new_filename , 'wb')
-        photo_write.write(image_file)
-        photo_write.close()
+        with open('images/uploads/' + new_filename, 'wb') as f:
+            [f.write(chunk) for chunk in iter(lambda: file.file.read(10000), b'')]
+        #photo_write = open('images/uploads/' + new_filename , 'wb')
+        #photo_write.write(image_file)
+        #photo_write.close()
         
         return {'result': True, 'filename': new_filename}
     else:
