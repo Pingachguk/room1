@@ -78,7 +78,7 @@ session.auth = (APP_BASIC_LOGIN, APP_BASIC_PASSWORD)
 session.headers = {'apikey': API_KEY}
 
 @app.post("/api/images/upload")
-def create_upload_file(file: UploadFile = File(...)):
+async def create_upload_file(file: UploadFile = File(...)):
     content_type = {
         'image/png': 'png',
         'image/jpeg': 'jpg',
