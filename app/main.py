@@ -78,7 +78,7 @@ session.auth = (APP_BASIC_LOGIN, APP_BASIC_PASSWORD)
 session.headers = {'apikey': API_KEY}
 
 @app.post("/api/images/upload")
-async def create_upload_file(file: UploadFile = File(...)):
+def create_upload_file(file: UploadFile = File(...)):
     content_type = {
         'image/png': 'png',
         'image/jpeg': 'jpg',
@@ -94,7 +94,7 @@ async def create_upload_file(file: UploadFile = File(...)):
         
         return {'result': True, 'filename': new_filename}
     else:
-        return {'result': False, 'message': 'Загрузите пожалуйста изображение'}
+        return {'result': False, 'message': 'Загрузите изображение'}
 
 @app.get("/api/clubs")
 def get_clubs():
