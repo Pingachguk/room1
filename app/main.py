@@ -30,9 +30,10 @@ origins = [
     "http://127.0.0.1:8080",
     "http://192.168.43.235:8080",
     "https://app.fitroom.ru",
-    "https://app.fitroom.ru:88",
+    "http://app.fitroom.ru",
+    "app.fitroom.ru",
     "http://localhost",
-    "https://localhost/"
+    "https://localhost",
     "localhost",
     "127.0.0.1"
 ]
