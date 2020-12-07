@@ -163,7 +163,9 @@ def get_key_by_club(club_id):
         {"club_id": "915d3c3b-daff-11ea-bbd8-005056838e97", "key": "e25f4e9d-92ec-4750-9b84-8655bb89f0ff"},
         {"club_id": "603cb73d-e7af-11ea-bbd8-005056838e97", "key": "f7bd7973-287a-4a0e-a706-745b25758182"},
         {"club_id": "42632fd3-e7af-11ea-bbd8-005056838e97", "key": "bfbce456-def7-43d0-a8f4-725176c67341"},
-        {"club_id": "15281aec-07c8-11eb-bbdb-005056838e97", "key": "bf54b61c-9039-4df2-b837-d85c6f0cbf4f"}
+        {"club_id": "15281aec-07c8-11eb-bbdb-005056838e97", "key": "bf54b61c-9039-4df2-b837-d85c6f0cbf4f"},
+        {"club_id": "b9ea102a-0ec0-11eb-bbdb-005056838e97", "key": "f8e758e6-effe-4516-9ae1-34a946a0d5b9"},
+        {"club_id": "129d154c-0ec1-11eb-bbdb-005056838e97", "key": "f3525e34-b232-4c1e-a2b7-11ae35f8bbaf"}
     ]
     
     for item in api_keys_clubs:
