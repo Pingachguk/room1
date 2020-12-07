@@ -26,10 +26,7 @@ app.include_router(order_app.router)
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 origins = [
-    "https://app.fitroom.ru",
-    "http://app.fitroom.ru",
-    "http://localhost",
-    "http://127.0.0.1"
+    "*"
 ]
 
 app.add_middleware(
@@ -392,7 +389,10 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Разовая аренда студии': 'office',
             'Пакет на 5 посещений': 'office',
             'Пакет на 10 посещений': 'office',
-            'Пакет на 20 посещений': 'office'
+            'Пакет на 20 посещений': 'office',
+            'Пакет Аренда студии на 5 посещений': 'office',
+            'Пакет Аренда студии на 10 посещений': 'office',
+            'Пакет Аренда студии на 20 посещений': 'office'
         }
         
         for item in categories:
@@ -410,7 +410,10 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Разовая аренда студии': 'office:once',
             'Пакет на 5 посещений': 'office:package',
             'Пакет на 10 посещений': 'office:package',
-            'Пакет на 20 посещений': 'office:package'
+            'Пакет на 20 посещений': 'office:package',
+            'Пакет Аренда студии на 5 посещений': 'office:package',
+            'Пакет Аренда студии на 10 посещений': 'office:package',
+            'Пакет Аренда студии на 20 посещений': 'office:package'
         }
         
         for item in categories:
@@ -963,7 +966,10 @@ def subscriptions_write(item: ModelSubscriptionWrite,
                                     'Разовая аренда студии': 'office',
                                     'Пакет на 5 посещений': 'office',
                                     'Пакет на 10 посещений': 'office',
-                                    'Пакет на 20 посещений': 'office'
+                                    'Пакет на 20 посещений': 'office',
+                                    'Пакет Аренда студии на 5 посещений': 'office',
+                                    'Пакет Аренда студии на 10 посещений': 'office',
+                                    'Пакет Аренда студии на 20 посещений': 'office'
                                 }
                                 
                                 for item in categories:
