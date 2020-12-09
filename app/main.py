@@ -396,7 +396,10 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Пакет Аренда студии на 5 посещений': 'office',
             'Пакет Аренда студии на 10 посещений': 'office',
             'Пакет Аренда студии на 20 посещений': 'office',
-            'Пакет на 100 посещений': 'office'
+            'Пакет на 100 посещений': 'office',
+
+            'Аренда зала Москва ул. Новотушинская д. 2': 'office',
+            'аренда зала автозаводская д. 23б': 'office'
 
         }
         
@@ -419,7 +422,10 @@ def get_client(utoken: str = Header(...), club_id: str = Header(...)):
             'Пакет Аренда студии на 5 посещений': 'office:package',
             'Пакет Аренда студии на 10 посещений': 'office:package',
             'Пакет Аренда студии на 20 посещений': 'office:package',
-            'Пакет на 100 посещений': 'office:package'
+            'Пакет на 100 посещений': 'office:package',
+
+            'Аренда зала Москва ул. Новотушинская д. 2': 'office:once',
+            'аренда зала автозаводская д. 23б': 'office:once'
         }
         
         for item in categories:
@@ -829,7 +835,9 @@ def get_shop_products(club_id: Optional[str] = Query(...), utoken: str = Header(
             'Пробная тренировка с тренером': {'first': 'trainer'},
             'Разовая тренировка с тренером': {'once': 'trainer'},
                       
-            'Разовая аренда студии': {'once': 'office'}
+            'Разовая аренда студии': {'once': 'office'},
+            'Аренда зала Москва ул. Новотушинская д. 2': {'once': 'office'},
+            'аренда зала автозаводская д. 23б': {'once': 'office'}
         }
         
         if category_package and category_slug:
@@ -976,7 +984,10 @@ def subscriptions_write(item: ModelSubscriptionWrite,
                                     'Пакет Аренда студии на 5 посещений': 'office',
                                     'Пакет Аренда студии на 10 посещений': 'office',
                                     'Пакет Аренда студии на 20 посещений': 'office',
-                                    'Пакет на 100 посещений': 'office'
+                                    'Пакет на 100 посещений': 'office',
+
+                                    'Аренда зала Москва ул. Новотушинская д. 2': 'office',
+                                    'аренда зала автозаводская д. 23б': 'office'
                                 }
                                 
                                 for item in categories:
