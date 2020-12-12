@@ -83,21 +83,25 @@ session.headers = {'apikey': API_KEY}
 async def create_upload_file(file: UploadFile = File(...)):
     content_type = {
         'image/png': 'png',
-        'image/jpeg': 'jpg',
-        'image/jpg': 'jpg'
+        'image/jpg': 'jpg',
+        'image/jpeg': 'jpeg'
     }
     
     if file.content_type in content_type:
         image_file = file.file.read()
         
-        new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
-        with open('images/uploads/' + new_filename, 'wb') as f:
-            f.write(file.file.read())
-            f.close()
-        
-        return {'result': True, 'filename': new_filename}
+        if len(image_file) < 30000000:
+            new_filename = str(uuid.uuid4()) + '.' + content_type[file.content_type]
+            photo_write = open('images/uploads/' + new_filename , 'wb')
+            photo_write.write(image_file)
+            photo_write.close()
+            
+            return {'result': True, 'filename': new_filename}
+        else:
+            return {'result': False, 'message': 'Загрузите изображение меньшего размера'}
     else:
         return {'result': False, 'message': 'Загрузите изображение'}
+
 
 @app.get("/api/clubs")
 def get_clubs():
@@ -215,7 +219,7 @@ async def verified_send(item: ModelVerifiedSend):
             # Add header as key/value pair to attachment part
             part.add_header(
                 "Content-Disposition",
-                f"attachment; filename={filename}",
+                f"attachment; filename= {filename}",
             )
 
             # Add attachment to message and convert message to string
