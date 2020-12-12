@@ -201,9 +201,9 @@ async def verified_send(item: ModelVerifiedSend):
     message.attach(MIMEText(body, "plain"))
 
     for image in item.images:
-        filename = "images/uploads/" + image  # In same directory as script
+        filename = image  # In same directory as script
         # Open PDF file in binary mode
-        with open(filename, "rb") as attachment:
+        with open('images/uploads/' + filename, "rb") as attachment:
             # Add file as application/octet-stream
             # Email client can usually download this automatically as attachment
             part = MIMEBase("application", "octet-stream")
