@@ -192,7 +192,7 @@ async def verified_send(item: ModelVerifiedSend):
     subject = "Заявка на верификацию FITROOM.RU"
     body = "Пользователь: " + item.phone + "\r\nИмя: " + item.name + "\r\nФамилия: " + item.last_name + "\r\nНомер / Серия: " + item.passport_number + "\r\nДата выдачи: " + item.passport_date + "\r\nКем выдан: " +  item.passport_place
     sender_email = "fitroom.server@yandex.ru"
-    receiver_email = "reworkgroup@mail.ru"
+    receiver_email = "arenda@fitroom.ru"
     password = 'Fitroom123456'
 
     # Create a multipart message and set headers
