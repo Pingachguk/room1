@@ -1157,7 +1157,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                                          headers={'usertoken': utoken, 'apikey': key})
             response_write_json = response_write.json()
 
-            print(response_white_json)
+            print(response_write_json)
             
             if response_write_json['result']:
                 # Регистрируем заказ и получаем ссылку на оплату
