@@ -1172,7 +1172,7 @@ def subscriptions_write(item: ModelSubscriptionReserved,
                             'phone': client_phone,
                             'club_id': item.club_id,
                             'type': category_type,
-                            'appointment_id': response_write_json['data']['appointment']['id'],
+                            'appointment_id': response_write_json['data']['appointment_id'],
                             'promocode': item.promocode
                         }
                         
