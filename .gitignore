@@ -1,5 +1,5 @@
 Pipfile
 images/*
 node_modules/*
-fitroom.db
+#fitroom.db
 .DS_Store
